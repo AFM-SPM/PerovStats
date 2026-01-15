@@ -1,0 +1,31 @@
+base_dir: ./images/ # Directory in which to search for data files
+output_dir: ./output # Directory to output results to
+file_ext: .spm # File extension of the data files.
+loading:
+  channel: Height # Channel to pull data from in the data files.
+filter:
+  run: false # Options : true, false
+  row_alignment_quantile: 0.5 # lower values may improve flattening of larger features
+  threshold_method: std_dev # Options : otsu, std_dev, absolute
+  otsu_threshold_multiplier: 1.0
+  threshold_std_dev:
+    below: 10.0 # Threshold for data below the image background
+    above: 1.0 # Threshold for data above the image background
+  threshold_absolute:
+    below: -1.0 # Threshold for data below the image background
+    above: 1.0 # Threshold for data above the image background
+  gaussian_size: 1.0121397464510862 # Gaussian blur intensity in px
+  gaussian_mode: nearest
+  # Scar removal parameters. Be careful with editing these as making the algorithm too sensitive may
+  # result in ruining legitimate data.
+  remove_scars:
+    run: false
+    removal_iterations: 2 # Number of times to run scar removal.
+    threshold_low: 0.250 # lower values make scar removal more sensitive
+    threshold_high: 0.666 # lower values make scar removal more sensitive
+    max_scar_width: 4 # Maximum thichness of scars in pixels.
+    min_scar_length: 16 # Minimum length of scars in pixels.
+freqsplit:
+  run: true
+  cutoff_freq_nm: 396.2
+  edge_width: 0.03

@@ -1,3 +1,10 @@
+[project]
+name = "perovstats"
+version = "0.1.0"
+
+[project.scripts]
+perovstats = "perovstats.cli:main"
+
 [tool.black]
 line-length = 88
 target-version = ["py311"]
