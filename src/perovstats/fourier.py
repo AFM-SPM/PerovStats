@@ -119,7 +119,7 @@ def plot_compare(
     plt.show()
 
 
-def create_samples(image_dicts, fs_config) -> None:
+def create_masks(image_dicts, fs_config) -> None:
     # for cutoff_freq_nm in CUTOFF_FREQ_NM:
     #     for config in DATA_CONFIG:
     #         output_dir = Path(

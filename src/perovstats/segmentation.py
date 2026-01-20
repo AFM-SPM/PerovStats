@@ -90,8 +90,7 @@ def clean_mask(
         Cleaned up mask array.
     """
     mask = ski.morphology.remove_small_holes(
-        ski.morphology.remove_small_objects(mask, min_size=area_threshold),
-        area_threshold=area_threshold,
+        ski.morphology.remove_small_objects(mask, max_size=area_threshold)
     )
     return ski.morphology.opening(mask, ski.morphology.disk(disk_radius))
 

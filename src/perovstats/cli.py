@@ -32,8 +32,8 @@ from yaml import safe_load
 from topostats.filters import Filters
 from topostats.io import LoadScans
 
-from .grains import create_plots
-from .fourier import create_samples
+from .grains import find_grains
+from .fourier import create_masks
 
 LOGGER = logging.getLogger(__name__)
 
@@ -223,9 +223,9 @@ def main(args: list[str] | None = None) -> None:
 
 
     # Apply fourier analysis and create binary mask of resultant high-pass image
-    masks = create_samples(image_dicts, fs_config)
+    masks = create_masks(image_dicts, fs_config)
 
-    # Find grains from mask
-    create_plots(masks)
+    # Find and display grains from mask
+    find_grains(masks)
 
     # List stats
