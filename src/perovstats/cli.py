@@ -19,22 +19,21 @@
 """Command-line interface for PerovStats workflow."""
 
 from __future__ import annotations
-import copy
 import logging
 import sys
+import copy
+from pathlib import Path
+from importlib import resources
 from argparse import ArgumentParser
 from argparse import Namespace
 from argparse import RawDescriptionHelpFormatter
-from importlib import resources
-from pathlib import Path
-import numpy as np
-from PIL import Image
+
+from yaml import safe_load
 from topostats.filters import Filters
 from topostats.io import LoadScans
-from yaml import safe_dump
-from yaml import safe_load
-from .freqsplit import frequency_split
-from .grain_analysis import create_plots
+
+from .grains import create_plots
+from .fourier import create_samples
 
 LOGGER = logging.getLogger(__name__)
 
@@ -142,19 +141,14 @@ def get_arg(key: str, args: Namespace, config: dict, default: str | None = None)
     return arg
 
 
-def freqsplit(args: list[str] | None = None) -> list[np.real]:
+def main(args: list[str] | None = None) -> None:
     """
-    Carry out frequency splitting on a batch of files.
+    Entrypoint for perovstats processes
 
     Parameters
     ----------
     args : list[str], optional
         Arguments.
-
-    Raises
-    ------
-    ValueError
-        If neither `cutoff` nor `cutoff_freq_nm` argument supplied.
     """
     logging.basicConfig(filename="freqsplit.log", level=logging.INFO)
     if args is None:
@@ -171,13 +165,14 @@ def freqsplit(args: list[str] | None = None) -> list[np.real]:
             config = safe_load(f)
 
     fs_config = config.get("freqsplit", {})
+    fs_config["output_dir"] = config["output_dir"]
+    fs_config["base_dir"] = config["base_dir"]
 
     # Update from command line arguments if specified
     fs_config.update({k: v for k, v in vars(args).items() if v is not None})
 
     cutoff = fs_config.get("cutoff")
     cutoff_freq_nm = fs_config.get("cutoff_freq_nm")
-    edge_width = fs_config.get("edge_width")
 
     if not (cutoff or cutoff_freq_nm):
         msg = "Must supply either `cutoff` or `cutoff_freq_nm`"
@@ -226,96 +221,11 @@ def freqsplit(args: list[str] | None = None) -> list[np.real]:
             filters.filter_image()
             topostats_object["image_flattened"] = filters.images["gaussian_filtered"]
 
-    high_passes = []
 
-    for filename, topostats_object in image_dicts.items():
-        fs_config["filename"] = filename
+    # Apply fourier analysis and create binary mask of resultant high-pass image
+    masks = create_samples(image_dicts, fs_config)
 
-        file_output_dir = Path(output_dir / filename)
-        file_output_dir.mkdir(parents=True, exist_ok=True)
-        # Save original image data
-        # np.save(
-        #     file_output_dir / f"{filename}_original.npy",
-        #     topostats_object["image_original"],
-        # )
-
-        # LOGGER.info("[%s] : Saved original to %s_original.npy", filename, filename)
-
-        if topostats_object.get("image_flattened") is not None:
-            image = topostats_object["image_flattened"]
-        else:
-            image = topostats_object["image_original"]
-        pixel_to_nm_scaling = topostats_object["pixel_to_nm_scaling"]
-        fs_config["pixel_to_nm_scaling"] = pixel_to_nm_scaling
-        LOGGER.debug("[%s] Image dimensions: ", image.shape)
-        LOGGER.info("[%s] : *** Frequency splitting ***", filename)
-
-        if cutoff_freq_nm:
-            cutoff = 2 * pixel_to_nm_scaling / cutoff_freq_nm
-            fs_config["cutoff"] = cutoff
-
-        LOGGER.info("[%s] : pixel_to_nm_scaling: %s", filename, pixel_to_nm_scaling)
-        LOGGER.info("[%s] : cutoff: %s, edge_width: %s", filename, cutoff, edge_width)
-
-        high_pass, low_pass = frequency_split(
-            image,
-            cutoff=cutoff,
-            edge_width=edge_width,
-        )
-
-        # Save high pass image data
-        np.save(file_output_dir / f"{filename}_high_pass.npy", high_pass)
-
-        # Save low pass image data
-        # np.save(output_dir / f"{filename}_low_pass.npy", low_pass)
-
-        LOGGER.info("[%s] : Saved output to %s_high_pass.npy", filename, filename)
-
-        # Convert to image format
-        arr = high_pass
-        arr = (arr - arr.min()) / (arr.max() - arr.min())
-        img = Image.fromarray(arr * 255).convert("L")
-        img.save(file_output_dir / f"{filename}_high_pass.jpg")
-
-        #arr = low_pass
-        #arr = (arr - arr.min()) / (arr.max() - arr.min())
-        #img = Image.fromarray(arr * 255).convert("L")
-        #img.save(file_output_dir / f"{filename}_low_pass.jpg")
-
-        #arr = topostats_object["image_original"]
-        #arr = (arr - arr.min()) / (arr.max() - arr.min())
-        #img = Image.fromarray(arr * 255).convert("L")
-        #img.save(file_output_dir / f"{filename}_original.jpg")
-
-        # Save configuration metadata for frequency splitting
-        with Path(file_output_dir / f"{filename}_config.yaml").open("w") as outfile:
-            safe_dump(fs_config, outfile, default_flow_style=False)
-
-        high_passes.append(high_pass)
-
-    return high_passes
-
-
-def analyse_np(high_pass: np.real) -> None:
-    pass
-
-
-def main(args: list[str] | None = None) -> None:
-    """
-    Entrypoint for perovstats processes
-
-    Parameters
-    ----------
-    args : list[str], optional
-        Arguments.
-    """
-    # Fourier
-    high_passes = freqsplit(args)
-
-    # Find grains
-    for high_pass in high_passes:
-        create_plots(high_pass)
-
-    # Display findings
+    # Find grains from mask
+    create_plots(masks)
 
     # List stats

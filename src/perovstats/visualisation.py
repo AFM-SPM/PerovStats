@@ -46,7 +46,7 @@ def plot_compare(
             ax[i].set_title(titles[i])
     if title:
         fig.suptitle(title, y=0.8)
-    plt.show()
+    # plt.show()
 
 
 def plot_overlay(im: np.ndarray, mask: np.ndarray, show_orig: bool = False) -> None:
@@ -60,7 +60,7 @@ def plot_overlay(im: np.ndarray, mask: np.ndarray, show_orig: bool = False) -> N
         ax = axs
     ax.imshow(im, cmap="gray")
     ax.imshow(mask > 0, cmap="jet", alpha=0.2)
-    plt.show()
+    # plt.show()
 
 
 def plot_dynamic(
