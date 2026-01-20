@@ -41,6 +41,7 @@ def create_plots(
         all_masks_data: dict[str, dict[str, npt.NDArray | float]],
         nm_to_micron: float,
 ):
+    """Show plots for grain area distribution and the rgb image of identified grains"""
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
     fig.canvas.manager.set_window_title("Grain size distributions")
     plot_areas(all_masks_grain_areas, nm_to_micron, title="all masks areas", units="nm", ax=axes[0])
@@ -48,6 +49,16 @@ def create_plots(
         plot_coloured_grains(filename, nm_to_micron, mask_data, col_num=1, ax=axes[i + 1])
     plt.tight_layout()
     plt.show()
+
+    # sns.histplot(
+    #     grain_stats,
+    #     x="grains_per_nm2",
+    #     hue="mask_size_x_nm",
+    #     kde=False,
+    #     bins="auto",
+    #     log_scale=True,
+    # )
+    # plt.show()
 
 
 def plot_areas(areas: list, nm_to_micron: float, title: str | None = None, units: str = "um", ax=None) -> None:
@@ -119,7 +130,7 @@ def plot_compare(
             ax[i].set_title(titles[i])
     if title:
         fig.suptitle(title, y=0.8)
-    # plt.show()
+    plt.show()
 
 
 def plot_overlay(im: np.ndarray, mask: np.ndarray, show_orig: bool = False) -> None:
@@ -133,7 +144,7 @@ def plot_overlay(im: np.ndarray, mask: np.ndarray, show_orig: bool = False) -> N
         ax = axs
     ax.imshow(im, cmap="gray")
     ax.imshow(mask > 0, cmap="jet", alpha=0.2)
-    # plt.show()
+    plt.show()
 
 
 def plot_dynamic(

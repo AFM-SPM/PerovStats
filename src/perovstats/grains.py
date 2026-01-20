@@ -40,61 +40,6 @@ def get_file_names() -> list[str]:
     return names
 
 
-# def plot_areas(areas: list, nm_to_micron: float, title: str | None = None, units: str = "um", ax=None) -> None:
-#     """Plot histogram of mask areas."""
-#     if ax is None:
-#         plt.gca()
-#     if title is None:
-#         title = ""
-#     title = title + f" n:{len(areas)}"
-#     if units == "um":
-#         areas = [area * nm_to_micron**2 for area in areas]
-#         ax.set_xlabel("area (µm²)")
-#     elif units == "nm":
-#         ax.set_xlabel("area (nm²)")
-#     else:
-#         msg = "units must be 'um' or 'nm'"
-#         raise ValueError(msg)
-#     sns.histplot(areas, kde=True, bins="auto", log_scale=True, ax=ax)
-#     ax.set_title(title)
-#     ax.set_ylabel("count")
-
-
-# def plot_coloured_grains(
-#         filename: str,
-#         nm_to_micron: float,
-#         mask_data: dict[str, dict[str, npt.NDArray | float]],
-#         col_num: int = 1,
-#         ax = None,
-# ) -> None:
-#     """Plot coloured grains."""
-#     if ax is None:
-#         ax = plt.gca()
-#     # num_items = len(masks_data)
-#     # num_rows = (num_items + col_num - 1) // col_num
-#     # fig, ax = plt.subplots(num_rows, col_num, figsize=(6 * col_num, 6 * num_rows))
-#     # for i, (filename, mask_data) in enumerate(masks_data.items()):
-#     mask_rgb = mask_data["mask_rgb"]
-#     num_grains = mask_data["num_grains"]
-#     grains_per_nm2 = mask_data["grains_per_nm2"]
-#     grains_per_um2 = grains_per_nm2 / nm_to_micron**2
-#     mask_size_x_um = mask_data["mask_size_x_nm"] * nm_to_micron
-#     mask_size_y_um = mask_data["mask_size_y_nm"] * nm_to_micron
-#     title = (
-#         f"{filename}\n"
-#         f"image size: {mask_size_x_um} x {mask_size_y_um} µm² | "
-#         f"grains: {num_grains} | grains/µm²: {grains_per_um2:.2f}"
-#     )
-#     # row = i // col_num
-#     # col = i % col_num
-#     # ax = np.atleast_2d(ax)
-#     # ax[row, col].imshow(mask_rgb, cmap="gray")
-#     # ax[row, col].set_title(title)
-#     ax.imshow(mask_rgb)
-#     ax.set_title(title)
-#     ax.axis("off")
-
-
 def find_grains(masks: list[Mask], names: list[str] | None = None) -> None:
     all_masks_grain_areas = []
     all_masks_data = {}
@@ -154,7 +99,10 @@ def find_grains(masks: list[Mask], names: list[str] | None = None) -> None:
 
     if data:
         # grain_stats = pd.DataFrame(data)
-        grain_stats = Grains(all_grains=mask_areas, **data[0])
+        all_grains = {}
+        for i, mask_area in enumerate(mask_areas):
+            all_grains[i] = mask_area
+        grain_stats = Grains(all_grains=all_grains, **data[0])
 
         logger.info(
             f"~~~ obtained {grain_stats.num_grains} grains from mask ~~~",
@@ -162,23 +110,6 @@ def find_grains(masks: list[Mask], names: list[str] | None = None) -> None:
 
         create_plots(filename, all_masks_grain_areas, all_masks_data, nm_to_micron=NM_TO_MICRON,)
 
-        # fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-        # fig.canvas.manager.set_window_title("Grain size distributions")
-        # plot_areas(all_masks_grain_areas, title="all masks areas", units="nm", ax=axes[0])
-        # for i, (filename, mask_data) in enumerate(all_masks_data.items()):
-        #     plot_coloured_grains(filename, mask_data, col_num=1, ax=axes[i + 1])
-        # plt.tight_layout()
-        # plt.show()
-
-        # BROKEN / IDK WHAT IT'S ACTUALLY NEEDED FOR
-        # sns.histplot(
-        #     grain_stats,
-        #     x="grains_per_nm2",
-        #     hue="mask_size_x_nm",
-        #     kde=False,
-        #     bins="auto",
-        #     log_scale=True,
-        # )
-        # plt.show()
+        # Save grain data to .csv
     else:
         LOGGER.warning("No images to process in grains.")

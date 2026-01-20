@@ -227,5 +227,3 @@ def main(args: list[str] | None = None) -> None:
 
     # Find and display grains from mask
     find_grains(masks)
-
-    # List stats
