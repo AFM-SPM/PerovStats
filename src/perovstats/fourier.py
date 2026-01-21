@@ -148,7 +148,7 @@ def create_masks(perovstats_object) -> None:
         perovstats_object.config = perovstats_object.config | new_config
 
         # Convert to image format
-        plt.imsave(output_dir / fname / f"{fname}_mask.jpg", np_mask)
+        plt.imsave(output_dir / fname / "images" / f"{fname}_mask.jpg", np_mask)
 
 
 def split_frequencies(perovstats_object) -> list[np.real]:
@@ -165,15 +165,9 @@ def split_frequencies(perovstats_object) -> list[np.real]:
     ValueError
         If neither `cutoff` nor `cutoff_freq_nm` argument supplied.
     """
-    # cutoff_freq_nm = fs_config["cutoff_freq_nm"]
-    # edge_width = fs_config["edge_width"]
-    # output_dir = Path(fs_config["output_dir"])
-
     cutoff_freq_nm = perovstats_object.config["freqsplit"]["cutoff_freq_nm"]
     edge_width = perovstats_object.config["freqsplit"]["edge_width"]
     output_dir = Path(perovstats_object.config["output_dir"])
-
-    images = []
 
     for image_data in perovstats_object.images:
         filename = image_data.filename
@@ -181,13 +175,6 @@ def split_frequencies(perovstats_object) -> list[np.real]:
 
         file_output_dir = Path(output_dir / filename)
         file_output_dir.mkdir(parents=True, exist_ok=True)
-        # Save original image data
-        # np.save(
-        #     file_output_dir / f"{filename}_original.npy",
-        #     topostats_object["image_original"],
-        # )
-
-        # LOGGER.info("[%s] : Saved original to %s_original.npy", filename, filename)
 
         if topostats_object.get("image_flattened") is not None:
             image = topostats_object["image_flattened"]
@@ -211,31 +198,17 @@ def split_frequencies(perovstats_object) -> list[np.real]:
             edge_width=edge_width,
         )
 
-        # Save high pass image data
-        np.save(file_output_dir / f"{filename}_high_pass.npy", high_pass)
-
-        # Create mask object for this file and include the high/low pass data and file names
-        # images.append(
-        #     ImageData(
-        #         high_pass=high_pass,
-        #         low_pass=low_pass,
-        #         file_directory=file_output_dir
-        #     )
-        # )
         image_data.high_pass = high_pass
         image_data.low_pass = low_pass
         image_data.file_directory = file_output_dir
-
-        # Save low pass image data
-        # np.save(output_dir / f"{filename}_low_pass.npy", low_pass)
-
-        LOGGER.info("[%s] : Saved output to %s_high_pass.npy", filename, filename)
 
         # Convert to image format
         arr = high_pass
         arr = (arr - arr.min()) / (arr.max() - arr.min())
         img = Image.fromarray(arr * 255).convert("L")
-        img.save(file_output_dir / f"{filename}_high_pass.jpg")
+        img_dir = Path(file_output_dir) / "images"
+        img_dir.mkdir(parents=True, exist_ok=True)
+        img.save(file_output_dir / "images" / f"{filename}_high_pass.jpg")
 
         #arr = low_pass
         #arr = (arr - arr.min()) / (arr.max() - arr.min())
@@ -245,8 +218,4 @@ def split_frequencies(perovstats_object) -> list[np.real]:
         arr = topostats_object["image_original"]
         arr = (arr - arr.min()) / (arr.max() - arr.min())
         img = Image.fromarray(arr * 255).convert("L")
-        img.save(file_output_dir / f"{filename}_original.jpg")
-
-        # Save configuration metadata for frequency splitting
-        # with Path(file_output_dir / f"{filename}_config.yaml").open("w") as outfile:
-        #     safe_dump(fs_config, outfile, default_flow_style=False)
+        img.save(file_output_dir / "images" / f"{filename}_original.jpg")

@@ -16,7 +16,20 @@ All output data is saved to `/output/` (editable in the config) under a sub-fold
 
 This folder contains:
 - A copy of the config settings used to generate the data
-- The post-fourier transform scan both in `.jpg` and `.npy` form
-- The boolean mask in both `.jpg` and `.npy` form
+- A `.jpg` of the post-fourier transform scan
+- A `.jpg` of the grain outline mask
 - The original image used
-- A `.csv` file containing the statistics of the image and individual grains
+- `.csv` files containing the statistics of the image as a whole and individual grains
+
+### Output directory stucture
+```text
+output/
+├─ [spm_filename]/
+│  ├─ images/
+│  │  ├─ [spm_filename]_high_pass.jpg
+│  |  ├─ [spm_filename]_mask.jpg
+│  │  └─ [spm_filename]_original.jpg
+│  ├─ config.yaml
+│  ├─ grain_statistics.csv
+│  └─ image_statistics.csv
+```

@@ -31,10 +31,11 @@ from argparse import RawDescriptionHelpFormatter
 from yaml import safe_load
 from topostats.filters import Filters
 from topostats.io import LoadScans
+import pandas as pd
 
 from .grains import find_grains
 from .fourier import create_masks
-from .statistics import save_to_csv
+from .statistics import save_to_csv, save_config
 from .classes import ImageData, PerovStats
 
 LOGGER = logging.getLogger(__name__)
@@ -234,6 +235,21 @@ def main(args: list[str] | None = None) -> None:
     # Find and display grains from mask
     find_grains(perovstats_object)
 
-    # Save each image's data to their own .csv file
+
     for image_object in perovstats_object.images:
-        save_to_csv(perovstats_object.config, image_object)
+        # Save image and grain data to their own .csv file
+        image_df = pd.DataFrame([image_object.to_dict()])
+        grains_list = []
+        for grain in image_object.grains.values():
+            grains_list.append(grain.to_dict())
+        grain_df = pd.DataFrame(grains_list)
+
+        output_filename = f"{output_dir}/{image_object.filename}/image_statistics.csv"
+        save_to_csv(image_df, output_filename)
+
+        output_filename = f"{output_dir}/{image_object.filename}/grain_statistics.csv"
+        save_to_csv(grain_df, output_filename)
+
+        # Save the config settings in a .yaml
+        output_filename = Path(output_dir) / Path(image_object.filename) / "config.yaml"
+        save_config(perovstats_object.config, output_filename)

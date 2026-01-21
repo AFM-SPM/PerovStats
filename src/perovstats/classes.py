@@ -8,6 +8,13 @@ class Grain:
     grain_area: float | None = None
     grain_circularity_rating: float | None = None
 
+    def to_dict(self) -> dict:
+        return {
+            "grain_id": self.grain_id,
+            "grain_area": self.grain_area,
+            "grain_circularity": self.grain_circularity_rating,
+        }
+
 
 @dataclass
 class ImageData:
@@ -26,6 +33,19 @@ class ImageData:
     num_grains: int | None = None
     cutoff_freq_nm: float | None = None
     cutoff: float | None = None
+
+    def to_dict(self) -> dict:
+        return {
+            "file_dir": self.file_directory,
+            "filename": self.filename,
+            "num_grains": self.num_grains,
+            "grains_per_nm2": self.grains_per_nm2,
+            "mask_size_x_nm": self.mask_size_x_nm,
+            "mask_size_y_nm": self.mask_size_y_nm,
+            "mask_area_nm": self.mask_area_nm,
+            "cutoff_freq_nm": self.cutoff_freq_nm,
+            "cutoff": self.cutoff,
+        }
 
 
 @dataclass
