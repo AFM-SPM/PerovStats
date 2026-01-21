@@ -45,7 +45,7 @@ def create_plots(
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
     fig.canvas.manager.set_window_title("Grain size distributions")
     plot_areas(mask_areas, nm_to_micron, title="grain area distribution", units="nm", ax=axes[0])
-    plot_coloured_grains(filename, nm_to_micron, mask_data, col_num=1, ax=axes[1])
+    plot_coloured_grains(filename, nm_to_micron, mask_data, ax=axes[1])
     plt.tight_layout()
     plt.show()
 
