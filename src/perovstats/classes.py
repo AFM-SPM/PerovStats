@@ -4,20 +4,16 @@ import numpy as np
 
 @dataclass
 class Grain:
-    area: float | None = None
-    circularity_rating: float | None = None
-
-
-@dataclass
-class Grains:
-    all_grains: dict[int, Grain]
+    grain_id: int
+    grain_area: float | None = None
+    grain_circularity_rating: float | None = None
 
 
 @dataclass
 class Mask:
     mask: np.ndarray
     config: dict[str, any]
-    grains: Grains | None = None
+    grains: dict[int, Grain] | None = None
     file_directory: str | None = None
     filename: str | None = None
     mask_rgb: np.ndarray | None = None
@@ -35,4 +31,3 @@ class Mask:
 class PerovStats:
     filename: str
     masks: dict[str, Mask] | None = None
-    grains: Grains | None = None

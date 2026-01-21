@@ -14,8 +14,9 @@ from skimage.measure import label
 from skimage.measure import regionprops
 from skimage import morphology
 
-from .classes import Mask, Grains, Grain
+from .classes import Mask, Grain
 from .visualisation import create_plots
+from .statistics import save_to_csv
 
 LOGGER = logging.getLogger(__name__)
 
@@ -107,15 +108,17 @@ def find_grains(masks: list[Mask], names: list[str] | None = None) -> None:
         # Assign area data for individual grains to appropriate classes
         for key, value in new_mask_data.items():
             setattr(mask_object, key, value)
-        for grain_area in mask_areas:
-            mask_object.grains = Grains(all_grains={})
-            mask_object.grains.all_grains[len(mask_object.grains.all_grains)] = Grain(area=grain_area)
+        mask_object.grains = {}
+        for i, grain_area in enumerate(mask_areas):
+            mask_object.grains[i] = Grain(grain_id=i, grain_area=grain_area)
 
         logger.info(
             f"~~~ obtained {mask_object.num_grains} grains from mask {mask_num} ~~~",
         )
 
         create_plots(filename, mask_areas, new_mask_data, nm_to_micron=NM_TO_MICRON)
+
+        save_to_csv(mask_object)
 
 
 @staticmethod
