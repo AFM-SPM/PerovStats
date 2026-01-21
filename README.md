@@ -6,13 +6,13 @@ An program to process AFM scans of perovskite and generate usable data and stati
 To install PerovStats directly from GitHub via ssh:
 
 ```console
-pip install git@github.com:tobyallwood/PerovStats.git
+pip install git@github.com:AFM-SPM/PerovStats.git
 ```
 
 To install PerovStats by cloning from the GitHub repository:
 
 ```console
-git clone https://github.com/tobyallwood/PerovStats.git
+git clone https://github.com/AFM-SPM/PerovStats.git
 cd PerovStats
 python -m pip install .
 ```
