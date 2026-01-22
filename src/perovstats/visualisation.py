@@ -3,11 +3,13 @@ import matplotlib.pyplot as plt
 from loguru import logger
 import numpy.typing as npt
 import seaborn as sns
+from pathlib import Path
 
 CUTOFF_FREQ_NM = 250
 
 
 def create_plots(
+        output_dir: str,
         filename: str,
         mask_areas: list,
         mask_data: dict[str, dict[str, npt.NDArray | float]],
@@ -19,7 +21,9 @@ def create_plots(
     plot_areas(mask_areas, nm_to_micron, title="grain area distribution", units="nm", ax=axes[0])
     plot_coloured_grains(filename, nm_to_micron, mask_data, ax=axes[1])
     plt.tight_layout()
-    plt.show()
+    plot_name = filename + "_coloured_grains.jpg"
+    plt.savefig(Path(output_dir) / plot_name, dpi=300, bbox_inches="tight")
+    plt.close()
 
 
 def plot_areas(areas: list, nm_to_micron: float, title: str | None = None, units: str = "um", ax=None) -> None:

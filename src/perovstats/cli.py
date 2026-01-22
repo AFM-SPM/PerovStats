@@ -32,6 +32,7 @@ from yaml import safe_load
 from topostats.filters import Filters
 from topostats.io import LoadScans
 import pandas as pd
+from loguru import logger
 
 from .grains import find_grains
 from .fourier import create_masks
@@ -253,3 +254,7 @@ def main(args: list[str] | None = None) -> None:
         # Save the config settings in a .yaml
         output_filename = Path(output_dir) / Path(image_object.filename) / "config.yaml"
         save_config(perovstats_object.config, output_filename)
+
+        logger.info(
+            f"exported to {output_filename}",
+        )

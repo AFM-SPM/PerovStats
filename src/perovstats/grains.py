@@ -116,7 +116,7 @@ def find_grains(perovstats_object: PerovStats) -> None:
             f"~~~ obtained {image_object.num_grains} grains from mask {image_num} ~~~",
         )
 
-        create_plots(filename, mask_areas, new_mask_data, nm_to_micron=NM_TO_MICRON)
+        create_plots(Path(config_yaml["output_dir"]) / filename / "images", filename, mask_areas, new_mask_data, nm_to_micron=NM_TO_MICRON)
 
         perovstats_object.images[image_num] = image_object
 

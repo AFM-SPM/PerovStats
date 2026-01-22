@@ -1,7 +1,6 @@
 from yaml import safe_dump
 
 import pandas as pd
-from loguru import logger
 
 
 def save_to_csv(df: pd.DataFrame, output_filename: str) -> None:
@@ -16,9 +15,6 @@ def save_to_csv(df: pd.DataFrame, output_filename: str) -> None:
         The output directory and filename.
     """
     df.to_csv(output_filename, index=False)
-    logger.info(
-        f"exported to {output_filename}",
-    )
 
 
 def save_config(config: dict, output_filename: str) -> None:
