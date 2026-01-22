@@ -120,8 +120,6 @@ def find_grains(perovstats_object: PerovStats) -> None:
 
         perovstats_object.images[image_num] = image_object
 
-    return perovstats_object
-
 
 @staticmethod
 def tidy_border(mask: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:

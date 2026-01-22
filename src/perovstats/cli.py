@@ -154,7 +154,7 @@ def main(args: list[str] | None = None) -> None:
     args : list[str], optional
         Arguments.
     """
-    logging.basicConfig(filename="freqsplit.log", level=logging.INFO)
+    logging.basicConfig(filename="perovstats.log", level=logging.INFO)
     if args is None:
         args = sys.argv[1:]
     args = _parse_args(args)
@@ -185,7 +185,7 @@ def main(args: list[str] | None = None) -> None:
     file_ext = get_arg("file_ext", args, config, "")
     img_files = list(Path(base_dir).glob("*" + file_ext))
 
-    # Get output_dir
+    # Get / make output_dir
     output_dir = get_arg("output_dir", args, config, "./output")
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -233,9 +233,8 @@ def main(args: list[str] | None = None) -> None:
     # Apply fourier analysis and create binary mask of resultant high-pass image
     create_masks(perovstats_object)
 
-    # Find and display grains from mask
+    # Find grains from mask
     find_grains(perovstats_object)
-
 
     for image_object in perovstats_object.images:
         # Save image and grain data to their own .csv file
