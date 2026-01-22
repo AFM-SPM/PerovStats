@@ -17,7 +17,7 @@ def save_to_csv(df: pd.DataFrame, output_filename: str) -> None:
     """
     df.to_csv(output_filename, index=False)
     logger.info(
-        f"exported to {output_filename} along with its configuration settings.",
+        f"exported to {output_filename}",
     )
 
 

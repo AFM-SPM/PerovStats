@@ -29,5 +29,12 @@ freqsplit:
   run: true
   cutoff_freq_nm: 396.2 # Frequency to split between for lowpass and highpass information
   edge_width: 0.03 # Width of borders of grains
-grains:
-  threshold: 13 # Threshold of edge finding for grains.
+mask:
+  threshold: 13
+  threshold_function: mad # Options: std, mad
+  smoothing:
+    smooth_function: gaussian # Options: gaussian, difference_of_gaussians
+    sigma: 8
+  cleaning:
+    area_threshold: 10000 # in nm2
+    disk_radius_factor: 40

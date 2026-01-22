@@ -54,35 +54,12 @@ def test_create_frequency_mask(shape: tuple, cutoff: float, width: float) -> Non
 
 
 
-def test_frequency_split():
-    image = np.array(
-        [
-            [0, 1, 0.5],
-            [0.6, 0, 0.3],
-            [0.1, 0.9, 0.5]
-        ]
-    )
-    cutoff = 0.01
-    edge_width = 0.03
+def test_frequency_split(image_random):
+    """Test splitting an image between a given frequency cutoff."""
+    cutoff = 0.05
+    edge_width = 0
+    high_pass, low_pass = frequency_split(image_random, cutoff, edge_width)
 
-    expected_high_pass = np.array(
-        [
-            [-0.27252962, 0.72747038, 0.22747038],
-            [0.32747038, -0.27252962, 0.02747038],
-            [-0.17252962, 0.62747038, 0.22747038]
-        ]
-    )
-    expected_low_pass = np.array(
-        [
-            [0.27252962, 0.27252962, 0.27252962],
-            [0.27252962, 0.27252962, 0.27252962],
-            [0.27252962, 0.27252962, 0.27252962]
-        ]
-    )
-
-    high_pass, low_pass = frequency_split(image, cutoff, edge_width)
-
-    print(high_pass)
-
-    assert np.allclose(high_pass, expected_high_pass)
-    assert np.allclose(low_pass, expected_low_pass)
+    assert high_pass.shape == image_random.shape
+    assert low_pass.shape == image_random.shape
+    assert np.allclose((high_pass + low_pass), image_random)

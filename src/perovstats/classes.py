@@ -66,7 +66,8 @@ class ImageData:
     cutoff : float
         The actual cutoff for the fourier transform.
     """
-    topostats_object: any
+    image_original: np.ndarray | None = None
+    image_flattened: np.ndarray | None = None
     mask: np.ndarray | None = None
     high_pass: np.ndarray | None = None
     low_pass: np.ndarray | None = None
@@ -81,6 +82,7 @@ class ImageData:
     num_grains: int | None = None
     cutoff_freq_nm: float | None = None
     cutoff: float | None = None
+    pixel_to_nm_scaling: float | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -93,6 +95,7 @@ class ImageData:
             "mask_area_nm": self.mask_area_nm,
             "cutoff_freq_nm": self.cutoff_freq_nm,
             "cutoff": self.cutoff,
+            "pixel_to_nm_scaling": self.pixel_to_nm_scaling,
         }
 
 

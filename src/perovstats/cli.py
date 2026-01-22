@@ -195,14 +195,15 @@ def main(args: list[str] | None = None) -> None:
     # Load scans
     loadscans = LoadScans(img_files, **load_config)
     loadscans.get_data()
-    # Get a dictionary of all the image data dictionaries.
-    # Keys are the image names
-    # Values are the individual image data dictionaries
     image_dicts = loadscans.img_dict
 
     perovstats_object = PerovStats(config=config, images=[])
     for filename, topostats_object in image_dicts.items():
-        image_data = ImageData(filename=filename, topostats_object=topostats_object)
+        image_data = ImageData(
+            filename=filename,
+            pixel_to_nm_scaling=topostats_object["pixel_to_nm_scaling"],
+            image_original=topostats_object["image_original"],
+            image_flattened=None)
         perovstats_object.images.append(image_data)
 
     LOGGER.info("Loaded %s images", len(perovstats_object.images))
@@ -214,9 +215,8 @@ def main(args: list[str] | None = None) -> None:
         # apply filters
         for image_data in perovstats_object.images:
             filename = image_data.filename
-            topostats_object = image_data.topostats_object
-            original_image = topostats_object["image_original"]
-            pixel_to_nm_scaling = topostats_object["pixel_to_nm_scaling"]
+            original_image = image_data.image_original
+            pixel_to_nm_scaling = image_data.pixel_to_nm_scaling
             LOGGER.debug("[%s] Image dimensions: %s", filename, original_image.shape)
             LOGGER.info("[%s] : *** Filtering ***", filename)
             _filter_config = copy.deepcopy(filter_config)

@@ -6,21 +6,16 @@ import numpy as np
 from PIL import Image
 import skimage as ski
 from matplotlib import pyplot as plt
-from yaml import dump as dump_yaml
-from yaml import safe_load
-from yaml import safe_dump
 
 from .freqsplit import frequency_split
-from .segmentation import clean_mask
 from .segmentation import create_grain_mask
-from .segmentation import threshold_mad
+from .segmentation import threshold_mad, threshold_mean_std
 
 
 LOGGER = logging.getLogger(__name__)
 
 BASE_DIR = Path("./images")
 OUTPUT_DIR = Path("./output")
-CUTOFF_FREQ_NM = ["225", "250", "275", "300", "325"]
 
 # Dataset configuration
 DATA_CONFIG = [
@@ -71,30 +66,6 @@ DATA_CONFIG = [
     },
 ]
 
-THRESHOLD_FUN = threshold_mad
-# THRESHOLD_ARGS = {"k": 12}
-SMOOTH_FUN = ski.filters.gaussian
-DIFF_GAUSS_SIGMA = (1, 3)
-GAUSS_SIGMA = 8
-CLEAN_FUN = clean_mask
-AREA_THRESHOLD_NM2 = 10000
-DISK_RADIUS_FACTOR = 40
-
-if ski.filters.gaussian == SMOOTH_FUN:
-    SMOOTH_ARGS = {"sigma": GAUSS_SIGMA}
-elif ski.filters.difference_of_gaussians == SMOOTH_FUN:
-    SMOOTH_ARGS = dict(zip(["low_sigma", "high_sigma"], DIFF_GAUSS_SIGMA))
-else:
-    SMOOTH_ARGS = {}
-
-# Segmentation mask configuration
-MASK_CONFIG = {
-    "threshold": THRESHOLD_FUN,
-    "smooth": SMOOTH_FUN,
-    "smooth_args": SMOOTH_ARGS,
-    "clean": CLEAN_FUN,
-}
-
 
 def create_masks(perovstats_object) -> None:
     # for cutoff_freq_nm in CUTOFF_FREQ_NM:
@@ -125,29 +96,38 @@ def create_masks(perovstats_object) -> None:
         fname = image.filename
         im = image.high_pass
         pixel_to_nm_scaling = perovstats_object.config["pixel_to_nm_scaling"]
-        mask_config = MASK_CONFIG.copy()
-        mask_config["clean_args"] = {
-            "area_threshold": AREA_THRESHOLD_NM2 / (pixel_to_nm_scaling**2),
-            "disk_radius": DISK_RADIUS_FACTOR / pixel_to_nm_scaling,
-        }
-        mask_config["threshold_args"] = {"k": perovstats_object.config["grains"]['threshold']}
-        np_mask = create_grain_mask(im, **mask_config)
+
+        # Thresholding config options
+        threshold = perovstats_object.config["mask"]["threshold"]
+        threshold_func = perovstats_object.config["mask"]["threshold_function"]
+        if threshold_func == "mad":
+            threshold_func = threshold_mad
+        elif threshold_func == "std":
+            threshold_func = threshold_mean_std
+
+        # Cleaning config options
+        area_threshold = perovstats_object.config["mask"]["cleaning"]["area_threshold"] / (pixel_to_nm_scaling**2)
+        disk_radius = perovstats_object.config["mask"]["cleaning"]["disk_radius_factor"] / pixel_to_nm_scaling
+
+        # Smoothing config options
+        smooth_sigma = perovstats_object.config["mask"]["smoothing"]["sigma"]
+        smooth_function = perovstats_object.config["mask"]["smoothing"]["smooth_function"]
+        if smooth_function == "gaussian":
+            smooth_function = ski.filters.gaussian
+
+        np_mask = create_grain_mask(
+            im,
+            threshold_func=threshold_func,
+            threshold=threshold,
+            smooth_sigma=smooth_sigma,
+            smooth_function=smooth_function,
+            area_threshold=area_threshold,
+            disk_radius=disk_radius
+        )
 
         perovstats_object.images[i].mask = np_mask
 
-        clean_args = mask_config.pop("clean_args")
-        mask_config = mask_config | clean_args
-        mask_config.pop("clean")
-        mask_config.pop("threshold")
-        mask_config.pop("smooth")
-        mask_config.pop("threshold_args")
-
-        new_config = {
-            "mask": mask_config
-        }
-        perovstats_object.config = perovstats_object.config | new_config
-
-        # Convert to image format
+        # Convert to image format and save
         plt.imsave(output_dir / fname / "images" / f"{fname}_mask.jpg", np_mask)
 
 
@@ -171,16 +151,15 @@ def split_frequencies(perovstats_object) -> list[np.real]:
 
     for image_data in perovstats_object.images:
         filename = image_data.filename
-        topostats_object = image_data.topostats_object
 
         file_output_dir = Path(output_dir / filename)
         file_output_dir.mkdir(parents=True, exist_ok=True)
 
-        if topostats_object.get("image_flattened") is not None:
-            image = topostats_object["image_flattened"]
+        if image_data.image_flattened is not None:
+            image = image_data.image_flattened
         else:
-            image = topostats_object["image_original"]
-        pixel_to_nm_scaling = topostats_object["pixel_to_nm_scaling"]
+            image = image_data.image_original
+        pixel_to_nm_scaling = image_data.pixel_to_nm_scaling
         perovstats_object.config["pixel_to_nm_scaling"] = pixel_to_nm_scaling
         LOGGER.debug("[%s] Image dimensions: ", image.shape)
         LOGGER.info("[%s] : *** Frequency splitting ***", filename)
@@ -215,7 +194,7 @@ def split_frequencies(perovstats_object) -> list[np.real]:
         #img = Image.fromarray(arr * 255).convert("L")
         #img.save(file_output_dir / f"{filename}_low_pass.jpg")
 
-        arr = topostats_object["image_original"]
+        arr = image_data.image_original
         arr = (arr - arr.min()) / (arr.max() - arr.min())
         img = Image.fromarray(arr * 255).convert("L")
         img.save(file_output_dir / "images" / f"{filename}_original.jpg")
