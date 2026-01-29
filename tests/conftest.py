@@ -44,7 +44,6 @@ def default_config() -> dict:
     config_path = BASE_DIR / "src" / "perovstats" / "default_config.yaml"
     with open(config_path, "r", encoding="utf-8") as f:
         config = safe_load(f)
-    config["pixel_to_nm_scaling"] = 1
     config["freqsplit"]["cutoff"] = 1
     return config
 

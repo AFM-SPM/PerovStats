@@ -5,9 +5,10 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 import skimage as ski
+from skimage.filters import threshold_local
 from matplotlib import pyplot as plt
 
-from .freqsplit import frequency_split
+from .freqsplit import frequency_split, frequency_split_2
 from .segmentation import create_grain_mask
 from .segmentation import threshold_mad, threshold_mean_std
 
@@ -24,7 +25,7 @@ def create_masks(perovstats_object) -> None:
         # For each image create and save a mask
         fname = image.filename
         im = image.high_pass
-        pixel_to_nm_scaling = perovstats_object.config["pixel_to_nm_scaling"]
+        pixel_to_nm_scaling = image.pixel_to_nm_scaling
 
         # Thresholding config options
         threshold = perovstats_object.config["mask"]["threshold"]
@@ -89,13 +90,11 @@ def split_frequencies(perovstats_object) -> list[np.real]:
         else:
             image = image_data.image_original
         pixel_to_nm_scaling = image_data.pixel_to_nm_scaling
-        perovstats_object.config["pixel_to_nm_scaling"] = pixel_to_nm_scaling
         LOGGER.debug("[%s] Image dimensions: ", image.shape)
         LOGGER.info("[%s] : *** Frequency splitting ***", filename)
 
         if cutoff_freq_nm:
             cutoff = 2 * pixel_to_nm_scaling / cutoff_freq_nm
-            perovstats_object.config["freqsplit"]["cutoff"] = cutoff
 
         LOGGER.info("[%s] : pixel_to_nm_scaling: %s", filename, pixel_to_nm_scaling)
         LOGGER.info("[%s] : cutoff: %s, edge_width: %s", filename, cutoff, edge_width)
@@ -104,6 +103,7 @@ def split_frequencies(perovstats_object) -> list[np.real]:
             image,
             cutoff=cutoff,
             edge_width=edge_width,
+            pixel_to_nm_scaling=pixel_to_nm_scaling,
         )
 
         image_data.high_pass = high_pass
@@ -118,10 +118,10 @@ def split_frequencies(perovstats_object) -> list[np.real]:
         img_dir.mkdir(parents=True, exist_ok=True)
         img.save(file_output_dir / "images" / f"{filename}_high_pass.jpg")
 
-        #arr = low_pass
-        #arr = (arr - arr.min()) / (arr.max() - arr.min())
-        #img = Image.fromarray(arr * 255).convert("L")
-        #img.save(file_output_dir / f"{filename}_low_pass.jpg")
+        arr = low_pass
+        arr = (arr - arr.min()) / (arr.max() - arr.min())
+        img = Image.fromarray(arr * 255).convert("L")
+        img.save(file_output_dir / "images" / f"{filename}_low_pass.jpg")
 
         arr = image_data.image_original
         arr = (arr - arr.min()) / (arr.max() - arr.min())

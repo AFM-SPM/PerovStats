@@ -47,19 +47,17 @@ def find_grains(perovstats_object: PerovStats) -> None:
 
     for image_num, image_object in enumerate(perovstats_object.images):
         filename = image_object.filename
-        file_directory = image_object.file_directory
 
         LOGGER.info(f"processing file {image_object.filename:<50}")
 
         config_yaml = perovstats_object.config
 
-        pixel_to_nm_scaling = config_yaml["pixel_to_nm_scaling"]
+        pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
 
         mask = image_object.mask.astype(bool)
         mask = np.invert(mask)
 
         labelled_mask = label(mask, connectivity=1)
-        # labelled_mask_rgb = label2rgb(labelled_mask, bg_label=0)
 
         # Remove grains touching the edge
         labelled_mask = tidy_border(labelled_mask)
@@ -76,9 +74,14 @@ def find_grains(perovstats_object: PerovStats) -> None:
         mask_area_nm = mask_size_x_nm * mask_size_y_nm
         grains_per_nm2 = len(mask_areas) / mask_area_nm
 
-        mean_grain_size = find_mean_grain_size(mask_areas)
-        median_grain_size = find_median_grain_size(mask_areas)
-        mode_grain_size = find_mode_grain_size(mask_areas)
+        if len(mask_areas) > 0:
+            mean_grain_size = find_mean_grain_size(mask_areas)
+            median_grain_size = find_median_grain_size(mask_areas)
+            mode_grain_size = find_mode_grain_size(mask_areas)
+        else:
+            mean_grain_size = 0
+            median_grain_size = 0
+            mode_grain_size = 0
 
         mask_data = {
             "mask_rgb": labelled_mask_rgb,

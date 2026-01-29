@@ -100,7 +100,6 @@ def _parse_args(args: list[str]) -> Namespace:
         "-f",
         "--cutoff_freq_nm",
         type=float,
-        default=396.2,
         help="Cutoff frequency in nm",
     )
     parser.add_argument(
@@ -171,8 +170,12 @@ def main(args: list[str] | None = None) -> None:
 
     fs_config = config.get("freqsplit", {})
 
+    print("fs config freq cutoff:", fs_config["cutoff_freq_nm"])
+
     # Update from command line arguments if specified
     fs_config.update({k: v for k, v in vars(args).items() if v is not None})
+
+    print("fs config freq cutoff AFTER:", fs_config["cutoff_freq_nm"])
 
     cutoff = fs_config.get("cutoff")
     cutoff_freq_nm = fs_config.get("cutoff_freq_nm")
@@ -228,7 +231,7 @@ def main(args: list[str] | None = None) -> None:
                 pixel_to_nm_scaling=pixel_to_nm_scaling,
                 **_filter_config,
             )
-            perovstats_object.config["pixel_to_nm_scaling"] = pixel_to_nm_scaling
+            image_data.pixel_to_nm_scaling = pixel_to_nm_scaling
             filters.filter_image()
 
     # Apply fourier analysis and create binary mask of resultant high-pass image
