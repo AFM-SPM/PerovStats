@@ -160,10 +160,7 @@ def frequency_split_old(
 
 
 def frequency_split(
-    image: np.ndarray,
-    cutoff: float,
-    edge_width: float,
-    pixel_to_nm_scaling: float,
+    image: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Split a given image into two separate images, one containing a smooth background

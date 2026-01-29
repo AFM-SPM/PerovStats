@@ -170,19 +170,15 @@ def main(args: list[str] | None = None) -> None:
 
     fs_config = config.get("freqsplit", {})
 
-    print("fs config freq cutoff:", fs_config["cutoff_freq_nm"])
-
     # Update from command line arguments if specified
     fs_config.update({k: v for k, v in vars(args).items() if v is not None})
 
-    print("fs config freq cutoff AFTER:", fs_config["cutoff_freq_nm"])
+    # cutoff = fs_config.get("cutoff")
+    # cutoff_freq_nm = fs_config.get("cutoff_freq_nm")
 
-    cutoff = fs_config.get("cutoff")
-    cutoff_freq_nm = fs_config.get("cutoff_freq_nm")
-
-    if not (cutoff or cutoff_freq_nm):
-        msg = "Must supply either `cutoff` or `cutoff_freq_nm`"
-        raise ValueError(msg)
+    # if not (cutoff or cutoff_freq_nm):
+    #     msg = "Must supply either `cutoff` or `cutoff_freq_nm`"
+    #     raise ValueError(msg)
 
     # Non-recursively find files
     base_dir = get_arg("base_dir", args, config, "./")

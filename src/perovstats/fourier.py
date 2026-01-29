@@ -8,7 +8,7 @@ import skimage as ski
 from skimage.filters import threshold_local
 from matplotlib import pyplot as plt
 
-from .freqsplit import frequency_split, frequency_split_2
+from .freqsplit import frequency_split
 from .segmentation import create_grain_mask
 from .segmentation import threshold_mad, threshold_mean_std
 
@@ -75,8 +75,6 @@ def split_frequencies(perovstats_object) -> list[np.real]:
     ValueError
         If neither `cutoff` nor `cutoff_freq_nm` argument supplied.
     """
-    cutoff_freq_nm = perovstats_object.config["freqsplit"]["cutoff_freq_nm"]
-    edge_width = perovstats_object.config["freqsplit"]["edge_width"]
     output_dir = Path(perovstats_object.config["output_dir"])
 
     for image_data in perovstats_object.images:
@@ -93,18 +91,19 @@ def split_frequencies(perovstats_object) -> list[np.real]:
         LOGGER.debug("[%s] Image dimensions: ", image.shape)
         LOGGER.info("[%s] : *** Frequency splitting ***", filename)
 
-        if cutoff_freq_nm:
-            cutoff = 2 * pixel_to_nm_scaling / cutoff_freq_nm
+        # if cutoff_freq_nm:
+        #     cutoff = 2 * pixel_to_nm_scaling / cutoff_freq_nm
 
         LOGGER.info("[%s] : pixel_to_nm_scaling: %s", filename, pixel_to_nm_scaling)
-        LOGGER.info("[%s] : cutoff: %s, edge_width: %s", filename, cutoff, edge_width)
 
-        high_pass, low_pass = frequency_split(
-            image,
-            cutoff=cutoff,
-            edge_width=edge_width,
-            pixel_to_nm_scaling=pixel_to_nm_scaling,
-        )
+        # high_pass, low_pass = frequency_split(
+        #     image,
+        #     cutoff=cutoff,
+        #     edge_width=edge_width,
+        #     pixel_to_nm_scaling=pixel_to_nm_scaling,
+        # )
+
+        high_pass, low_pass = frequency_split(image)
 
         image_data.high_pass = high_pass
         image_data.low_pass = low_pass

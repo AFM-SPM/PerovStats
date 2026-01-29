@@ -42,7 +42,6 @@ def find_grains(perovstats_object: PerovStats) -> None:
         The updated class object.
     """
     all_masks_grain_areas = []
-    all_masks_data = {}
     data = []
 
     for image_num, image_object in enumerate(perovstats_object.images):
@@ -84,19 +83,6 @@ def find_grains(perovstats_object: PerovStats) -> None:
             mode_grain_size = 0
 
         mask_data = {
-            "mask_rgb": labelled_mask_rgb,
-            "grains_per_nm2": grains_per_nm2,
-            "mask_size_x_nm": mask_size_x_nm,
-            "mask_size_y_nm": mask_size_y_nm,
-            "mask_area_nm": mask_area_nm,
-            "num_grains": len(mask_areas),
-            "mean_grain_size": mean_grain_size,
-            "median_grain_size": median_grain_size,
-            "mode_grain_size": mode_grain_size
-        }
-        all_masks_data[f"{filename}-{config_yaml['freqsplit']['cutoff_freq_nm']}"] = mask_data
-
-        new_mask_data = {
             "filename": filename,
             "mask_rgb": labelled_mask_rgb,
             "grains_per_nm2": grains_per_nm2,
@@ -104,18 +90,18 @@ def find_grains(perovstats_object: PerovStats) -> None:
             "mask_size_y_nm": mask_size_y_nm,
             "mask_area_nm": mask_area_nm,
             "num_grains": len(mask_areas),
-            "cutoff_freq_nm": config_yaml["freqsplit"]["cutoff_freq_nm"],
+            # "cutoff_freq_nm": config_yaml["freqsplit"]["cutoff_freq_nm"],
             "cutoff": config_yaml["freqsplit"]["cutoff"],
             "mean_grain_size": mean_grain_size,
             "median_grain_size": median_grain_size,
             "mode_grain_size": mode_grain_size
         }
 
-        data.append(new_mask_data)
+        data.append(mask_data)
 
 
         # Assign area data for individual grains to appropriate classes
-        for key, value in new_mask_data.items():
+        for key, value in mask_data.items():
             setattr(image_object, key, value)
         image_object.grains = {}
         for i, grain_area in enumerate(mask_areas):
@@ -125,7 +111,7 @@ def find_grains(perovstats_object: PerovStats) -> None:
             f"~~~ obtained {image_object.num_grains} grains from mask {image_num} ~~~",
         )
 
-        create_plots(Path(config_yaml["output_dir"]) / filename / "images", filename, mask_areas, new_mask_data, nm_to_micron=NM_TO_MICRON)
+        create_plots(Path(config_yaml["output_dir"]) / filename / "images", filename, mask_areas, mask_data, nm_to_micron=NM_TO_MICRON)
 
         perovstats_object.images[image_num] = image_object
 
