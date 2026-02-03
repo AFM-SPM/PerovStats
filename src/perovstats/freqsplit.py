@@ -95,7 +95,6 @@ def frequency_split(
     image: np.ndarray,
     cutoff: float,
     edge_width: float,
-    pixel_to_nm_scaling: float,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Perform frequency split on the specified image.
@@ -134,8 +133,6 @@ def frequency_split(
     fft_input[:] = extended_image
     dft = fft_object()
 
-    # cutoff = 2 * pixel_to_nm_scaling / cutoff
-
     # Create mask to filter to specified frequencies
     mask = create_frequency_mask(extended_image.shape, cutoff, edge_width=edge_width)
 
@@ -153,3 +150,27 @@ def frequency_split(
     ]
 
     return high_pass, image - high_pass
+
+
+def find_cutoff(image, edge_width, min_cutoff, max_cutoff, cutoff_step, min_rms):
+    best_cutoff = None
+    min_found_rms = float('inf')
+    cutoff_values = []
+    rms_values = []
+
+    for cutoff in np.arange(min_cutoff, max_cutoff, cutoff_step):
+        high_pass, _ = frequency_split(image, cutoff, edge_width)
+        current_rms = calculate_rms(high_pass)
+
+        cutoff_values.append(cutoff)
+        rms_values.append(current_rms)
+
+        if current_rms > min_rms and current_rms < min_found_rms:
+            min_found_rms = current_rms
+            best_cutoff = cutoff
+
+    return best_cutoff, rms_values, cutoff_values
+
+
+def calculate_rms(image):
+    return np.sqrt(np.mean(image**2))
