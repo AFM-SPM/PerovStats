@@ -4,14 +4,11 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
-import skimage as ski
 from matplotlib import pyplot as plt
+import skimage as ski
+from skimage.measure import label
 
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import tkinter as tk
-from tkinter import ttk
-
+from perovstats.grains import tidy_border, label2rgb, regionprops
 from .freqsplit import frequency_split, find_cutoff
 from .segmentation import create_grain_mask
 from .segmentation import threshold_mad, threshold_mean_std
@@ -19,8 +16,6 @@ from .segmentation import threshold_mad, threshold_mean_std
 
 LOGGER = logging.getLogger(__name__)
 
-image_params = {}
-final_images = {}
 
 def create_masks(perovstats_object) -> None:
     split_frequencies(perovstats_object)
@@ -34,7 +29,6 @@ def create_masks(perovstats_object) -> None:
         pixel_to_nm_scaling = image.pixel_to_nm_scaling
 
         # Thresholding config options
-        threshold = perovstats_object.config["mask"]["threshold"]
         threshold_func = perovstats_object.config["mask"]["threshold_function"]
         if threshold_func == "mad":
             threshold_func = threshold_mad
@@ -54,6 +48,18 @@ def create_masks(perovstats_object) -> None:
         smooth_function = perovstats_object.config["mask"]["smoothing"]["smooth_function"]
         if smooth_function == "gaussian":
             smooth_function = ski.filters.gaussian
+        elif smooth_function == "difference_of_gaussians":
+            smooth_function = ski.filters.difference_of_gaussians
+
+        threshold = find_threshold(
+            im,
+            threshold_func=threshold_func,
+            smooth_sigma=smooth_sigma,
+            smooth_function=smooth_function,
+            area_threshold=area_threshold,
+            disk_radius=disk_radius,
+            pixel_to_nm_scaling=pixel_to_nm_scaling,
+        )
 
         np_mask = create_grain_mask(
             im,
@@ -62,13 +68,19 @@ def create_masks(perovstats_object) -> None:
             smooth_sigma=smooth_sigma,
             smooth_function=smooth_function,
             area_threshold=area_threshold,
-            disk_radius=disk_radius
+            disk_radius=disk_radius,
         )
 
         perovstats_object.images[i].mask = np_mask
 
         # Convert to image format and save
         plt.imsave(output_dir / fname / "images" / f"{fname}_mask.jpg", np_mask)
+
+        # Save high-pass with mask skeleton overlay
+        high_pass = perovstats_object.images[i].high_pass
+        rgb_highpass = np.stack((high_pass,)*3, axis=-1)
+        rgb_highpass[np_mask > 0] = [1, 0, 0]
+        plt.imsave(output_dir / fname / "images" / f"{fname}_mask_overlay.jpg", rgb_highpass)
 
 
 def split_frequencies(perovstats_object) -> list[np.real]:
@@ -130,42 +142,9 @@ def split_frequencies(perovstats_object) -> list[np.real]:
             edge_width=edge_width,
         )
 
-        # high_pass, low_pass = open_freq_split_GUI(
-        #     filename,
-        #     image,
-        #     cutoff=cutoff,
-        #     edge_width=edge_width,
-        # )
-
         image_data.high_pass = normalise_array(high_pass)
         image_data.low_pass = low_pass
         image_data.file_directory = file_output_dir
-
-
-        # fig = plt.subplots(2, 2, figsize=(10, 8), constrained_layout=True)
-        # ((ax_orig, ax_hp), (ax_graph, ax_lp)) = fig[1]
-        # ax_orig.imshow(image, cmap='gray')
-        # ax_orig.set_title('Original image')
-        # ax_orig.axis('off')
-
-        # ax_hp.imshow(high_pass, cmap='gray')
-        # ax_hp.set_title("High passed image")
-        # ax_hp.axis('off')
-
-        # ax_lp.imshow(low_pass, cmap='gray')
-        # ax_lp.set_title("Low passed image")
-        # ax_lp.axis('off')
-
-        # ax_graph.plot(cutoffs, rmses, marker='.', color='royalblue', label='highpass filter rms')
-        # ax_graph.axhline(y=10, color='red', linestyle='--', label='Hard coded min rms (10)')
-        # ax_graph.axvline(x=cutoff, color='green', linestyle='-.', label='Chosen cutoff from hard coded RMS')
-        # ax_graph.set_title("RMS roughness to cutoff frequency value")
-        # ax_graph.set_xlabel("Cutoff frequency")
-        # ax_graph.set_ylabel("RMS value")
-        # ax_graph.grid(True, alpha=0.3)
-        # ax_graph.legend()
-
-        # plt.show()
 
         # Convert to image format
         arr = high_pass
@@ -196,147 +175,73 @@ def normalise_array(arr):
     normalised = (clipped - v_min) / (v_max - v_min)
     return normalised
 
-# def open_freq_split_GUI(
-#         filename,
-#         image,
-#         cutoff,
-#         edge_width,
-# ):
-#     # Set parameters to default
-#     image_params["image"] = image
-#     image_params["display_mode"] = 0
-#     image_params["cutoff"] = cutoff
-#     image_params["edge_width"] = edge_width
 
-#     final_images["high_pass"] = image
-#     final_images["low_pass"] = image
+def find_threshold(
+        image,
+        threshold_func,
+        smooth_sigma,
+        smooth_function,
+        area_threshold,
+        disk_radius,
+        pixel_to_nm_scaling,
+    ):
+    """
+    Loop through possible threshold values and select the value
+    that produces the most grains.
 
-#     # Set up window and frames
-#     root = tk.Tk()
-#     title_frame = tk.Frame(root)
-#     title_frame.grid(row=0, column=0, columnspan=2, sticky="nsew")
-#     image_frame = tk.Frame(root)
-#     image_frame.grid(row=1, column=0, rowspan=2, sticky="nsew", padx=10, pady=10)
-#     options_frame = tk.Frame(root)
-#     options_frame.grid(row=1, column=1, sticky="nsew", padx=10)
-#     footer_frame = tk.Frame(options_frame)
-#     footer_frame.grid(row=7, column=0, sticky="s")
+    Parameters
+    ----------
+    image : np.ndarray
+        Numpy array of the high-passed image to use.
+    threshold_func : Callable
+        Threshold function.
+    threshold : float
+        Threshold value.
+    threshold_args : dict, optional
+        Arguments to be passed to the threshold function.
+    smooth : Callable, optional
+        Smoothing function.
+    smooth_args : dict, optional
+        Arguments to be passed to the smoothing function.
+    pixel_to_nm_scaling : float
+        The scale factor of pixels:nm
 
-#     # Large label - frequency split - [image name]
-#     title_text = f"Frequency Splitter\n({filename})"
-#     title = tk.Label(title_frame, text=title_text, font=("Helvetica", 15)).grid(row=0, column=0, sticky="nesw")
+    Returns
+    -------
+    float
+        The selected best threshold.
+    """
+    best_threshold = None
+    best_grain_num = 0
+    for curr_threshold in np.arange(-1, 3, 0.01):
+        curr_threshold = round(curr_threshold, 3)
+        np_mask = create_grain_mask(
+            image,
+            threshold_func=threshold_func,
+            threshold=curr_threshold,
+            smooth_sigma=smooth_sigma,
+            smooth_function=smooth_function,
+            area_threshold=area_threshold,
+            disk_radius=disk_radius,
+        )
 
-#     # Small label - instructions
-#     instruction_text = ("Select the best frequency to split the image into a low-pass and high-pass. Aim for the lowest"
-#                         + " frequency value that does not show the large curves in the high-pass image.")
-#     instructions = tk.Label(
-#         title_frame, text=instruction_text, font=("Helvetica", 11), wraplength=600
-#     ).grid(row=1, column=0, sticky="nesw")
+        mask = np_mask.astype(bool)
+        mask = np.invert(mask)
 
-#     # Matplotlib - image display
-#     fig = Figure(figsize=(4,4), dpi=100)
-#     plot = fig.add_subplot(111)
-#     curr_image = plot.imshow(image, cmap="grey")
-#     image_params["curr_image"] = curr_image
-#     plot.axis("off")
-#     fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
-#     canvas = FigureCanvasTkAgg(fig, master=image_frame)
-#     canvas.draw()
-#     canvas.get_tk_widget().grid(sticky="nesw")
-#     image_params["canvas"] = canvas
+        labelled_mask = label(mask, connectivity=1)
 
-#     # Slider 1 - Select/ preview cutoff frequency
-#     freq_slider_label = tk.Label(options_frame, text="Cutoff frequency:").grid(row=0, column=0, sticky="nesw")
-#     freq_value = tk.DoubleVar(value = image_params["cutoff"])
-#     freq_slider = ttk.Scale(
-#         options_frame,
-#         from_=0,
-#         to=0.3,
-#         orient="horizontal",
-#         command=freq_slider_changed,
-#         variable=freq_value
-#     ).grid(row=1, column=0, sticky="nesw")
-#     freq_slider_value_label = tk.Label(options_frame, textvariable=freq_value).grid(row=0, column=1, sticky="e")
+        # Remove grains touching the edge
+        labelled_mask = tidy_border(labelled_mask)
 
-#     # Slider 2 - Select/ preview edge-width
-#     edge_width_slider_label = tk.Label(options_frame, text="Edge width:").grid(row=2, column=0, sticky="nesw")
-#     edge_width_value = tk.DoubleVar(value = image_params["edge_width"])
-#     edge_width_slider = ttk.Scale(
-#         options_frame,
-#         from_=0,
-#         to=0.2,
-#         orient="horizontal",
-#         command=edge_width_slider_changed,
-#         variable=edge_width_value
-#     ).grid(row=3, column=0, sticky="nesw", pady=(0, 10))
-#     freq_slider_value_label = tk.Label(options_frame, textvariable=edge_width_value).grid(row=2, column=1, sticky="e")
+        mask_regionprops = regionprops(labelled_mask)
+        mask_areas = [
+            regionprop.area * pixel_to_nm_scaling**2 for regionprop in mask_regionprops
+        ]
 
-#     # Radio button 1 - display original
-#     # Radio button 2 - display high-pass
-#     # Radio button 3 - display low-pass
-#     v = tk.IntVar(value=0)
-#     radio_values = {
-#         "Original image": 0,
-#         "High-pass": 1,
-#         "Low-pass": 2
-#     }
-#     for (text, value) in radio_values.items():
-#         row = 3 + int(value)
-#         tk.Radiobutton(options_frame, text=text, variable=v, command=lambda: radio_changed(v.get()), value=value).grid(row=row, column=0, sticky="nw")
+        if len(mask_areas) > best_grain_num:
+            best_grain_num = len(mask_areas)
+            best_threshold = curr_threshold
 
+    print(f"BEST THRESHOLD FOUND: {best_threshold} which finds {best_grain_num} grains.")
 
-#     # Button - Confirm
-#     confirm_button = tk.Button(footer_frame, text="Confirm", command=lambda: confirm_split(root)).grid(row=0, column=1, sticky="se")
-
-#     root.columnconfigure(0, weight=1)
-#     root.rowconfigure(0, weight=1)
-#     title_frame.columnconfigure(0, weight=1)
-#     title_frame.rowconfigure(0, weight=1)
-#     image_frame.columnconfigure(0, weight=1)
-#     image_frame.rowconfigure(0, weight=1)
-#     options_frame.columnconfigure(0, weight=1, minsize=250)
-#     options_frame.rowconfigure(0, weight=1)
-#     footer_frame.columnconfigure(0, weight=1)
-#     footer_frame.rowconfigure(0, weight=1)
-
-#     root.mainloop()
-
-#     return final_images["high_pass"], final_images["low_pass"]
-
-
-# def freq_slider_changed(value):
-#     image_params["cutoff"] = float(value)
-#     print(image_params.items())
-#     update_image(**image_params)
-
-
-# def edge_width_slider_changed(value):
-#     image_params["edge_width"] = float(value)
-#     update_image(**image_params)
-
-
-# def radio_changed(value):
-#     image_params["display_mode"] = int(value)
-#     update_image(**image_params)
-
-
-# def update_image(image, curr_image, cutoff, edge_width, display_mode, canvas):
-#     high_pass, low_pass = frequency_split(
-#         image,
-#         cutoff=cutoff,
-#         edge_width=edge_width,
-#     )
-#     img = None
-#     if display_mode == 0:
-#         img = image
-#     elif display_mode == 1:
-#         img = high_pass
-#     elif display_mode == 2:
-#         img = low_pass
-#     img = (img - img.min()) / (img.max() - img.min())
-#     curr_image.set_data(img)
-#     canvas.draw_idle()
-
-
-# def confirm_split(root):
-#     root.destroy()
+    return best_threshold, best_grain_num
