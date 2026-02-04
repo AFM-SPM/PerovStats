@@ -30,7 +30,7 @@ freqsplit:
   cutoff_freq_nm: 396.2 # Frequency to split between for lowpass and highpass information
   edge_width: 0.03 # Width of borders of grains
 mask:
-  threshold_function: std # Options: std, mad
+  threshold_function: mad # Options: std, mad
   smoothing:
     smooth_function: gaussian # Options: gaussian, difference_of_gaussians
     sigma: 8

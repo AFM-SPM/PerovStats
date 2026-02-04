@@ -120,7 +120,7 @@ def split_frequencies(perovstats_object) -> list[np.real]:
 
         LOGGER.info("[%s] : pixel_to_nm_scaling: %s", filename, pixel_to_nm_scaling)
 
-        cutoff, rmses, cutoffs = find_cutoff(
+        cutoff = find_cutoff(
             image,
             edge_width,
             min_cutoff=0,
@@ -244,4 +244,4 @@ def find_threshold(
 
     print(f"BEST THRESHOLD FOUND: {best_threshold} which finds {best_grain_num} grains.")
 
-    return best_threshold, best_grain_num
+    return best_threshold

@@ -169,7 +169,7 @@ def find_cutoff(image, edge_width, min_cutoff, max_cutoff, cutoff_step, min_rms)
             min_found_rms = current_rms
             best_cutoff = cutoff
 
-    return best_cutoff, rms_values, cutoff_values
+    return best_cutoff
 
 
 def calculate_rms(image):
