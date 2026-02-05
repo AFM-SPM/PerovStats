@@ -86,7 +86,7 @@ def test_normalise_array(arr: np.array, expected: np.array):
 
     assert np.allclose(norm_arr, expected)
 
-
+@pytest.mark.xfail(reason="Waiting for images with findable grains")
 @pytest.mark.parametrize(
         (
             "filename",

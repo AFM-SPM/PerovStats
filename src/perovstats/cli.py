@@ -144,6 +144,8 @@ def get_arg(key: str, args: Namespace, config: dict, default: str | None = None)
 def setup_logger():
     logger.add("logs/PerovStats-{time:YYYY-MM-DD-HH-mm-ss}.log", level="DEBUG")
 
+    
+@logger.catch
 def main(args: list[str] | None = None) -> None:
     """
     Entrypoint for perovstats, calls main functions in the process.
