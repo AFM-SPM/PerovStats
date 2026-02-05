@@ -36,13 +36,13 @@ def find_grains(config, image_object, image_num) -> None:
     parovstats_object : PerovStats
         The updated class object.
     """
+    logger.info(f"[{image_object.filename}] : *** Grain finding ***")
+
     all_masks_grain_areas = []
     data = []
     filename = image_object.filename
     config_yaml = config
     pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
-
-    logger.info(f"processing file {image_object.filename:<50}")
 
     mask = image_object.mask.astype(bool)
     mask = np.invert(mask)
@@ -96,7 +96,7 @@ def find_grains(config, image_object, image_num) -> None:
         image_object.grains[i] = Grain(grain_id=i, grain_area=grain_area)
 
     logger.info(
-        f"[{filename}] obtained {image_object.num_grains} grains from mask {image_num}",
+        f"[{filename}] : Obtained {image_object.num_grains} grains",
     )
 
     create_plots(Path(config_yaml["output_dir"]) / filename / "images", filename, mask_areas, mask_data, nm_to_micron=NM_TO_MICRON)
