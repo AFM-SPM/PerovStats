@@ -4,7 +4,7 @@ file_ext: .spm # File extension of the data files.
 loading:
   channel: Height # Channel to pull data from in the data files.
 filter:
-  run: false # Options : true, false
+  run: true # Options : true, false
   row_alignment_quantile: 0.5 # lower values may improve flattening of larger features
   threshold_method: std_dev # Options : otsu, std_dev, absolute
   otsu_threshold_multiplier: 1.0
@@ -28,15 +28,15 @@ filter:
 freqsplit:
   run: true
   edge_width: 0.03 # Width of borders of grains
-  cutoff_bounds: [0, 0.2]
-  cutoff_step: 0.005
-  min_rms: 12
+  cutoff_bounds: [0, 0.2] # Minimum and maximum cutoff points for frequency splitting.
+  cutoff_step: 0.005 # Amount to increase the tested cutoff by for each iteration.
+  min_rms: 12 # Minimum roughness mean score of a high-pass after splitting along the cutoff.
 mask:
-  threshold_function: mad # Options: std, mad
-  threshold_bounds: [-1, 3]
-  threshold_step: 0.01
+  threshold_function: mad # Options: std, mad.
+  threshold_bounds: [0, 3] # Minimum and maximum thresholds for masking.
+  threshold_step: 0.05 # Amount to increase the tested threshold by each iteration.
   smoothing:
-    smooth_function: gaussian # Options: gaussian, difference_of_gaussians
+    smooth_function: gaussian # Options: gaussian, difference_of_gaussians.
     sigma: 8
   cleaning:
     area_threshold: 10000 # in nm2
