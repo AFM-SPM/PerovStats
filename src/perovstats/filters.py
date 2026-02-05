@@ -13,7 +13,7 @@ def run_filters(config, image_object):
         _filter_config = copy.deepcopy(filter_config)
         _filter_config.pop("run")
         filters = Filters(
-            image=image_object.original_image,
+            image=image_object.image_original,
             filename=filename,
             pixel_to_nm_scaling=image_object.pixel_to_nm_scaling,
             **_filter_config,
