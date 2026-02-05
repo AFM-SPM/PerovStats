@@ -89,11 +89,13 @@ class ImageData:
     median_grain_size: float | None = None
     mode_grain_size: float | None = None
     pixel_to_nm_scaling: float | None = None
+    threshold: float | None = None
 
     def to_dict(self) -> dict:
         return {
             "file_dir": self.file_directory,
             "filename": self.filename,
+            "threshold": self.threshold,
             "num_grains": self.num_grains,
             "grains_per_nm2": self.grains_per_nm2,
             "mask_size_x_nm": self.mask_size_x_nm,

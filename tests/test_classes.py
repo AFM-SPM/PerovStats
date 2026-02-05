@@ -41,6 +41,7 @@ def test_grain_to_dict(
                 'mode_grain_size_nm2': None,
                 'num_grains': 1,
                 'pixel_to_nm_scaling': 1,
+                'threshold': -0.8,
             }
         )
     ]

@@ -4,6 +4,9 @@ import cv2
 import numpy as np
 import pyfftw
 from scipy.special import erf
+from loguru import logger
+
+from perovstats.classes import ImageData
 
 def extend_image(
     image: np.ndarray,
@@ -152,7 +155,16 @@ def frequency_split(
     return high_pass, image - high_pass
 
 
-def find_cutoff(image, edge_width, min_cutoff, max_cutoff, cutoff_step, min_rms):
+def find_cutoff(
+        image_object: ImageData,
+        edge_width: float,
+        min_cutoff: float,
+        max_cutoff: float,
+        cutoff_step: float,
+        min_rms: float,
+    ):
+    """Iterate through possible cutoff points to find one with the smallest RMS over a given value."""
+    image = image_object.image_original
     best_cutoff = None
     min_found_rms = float('inf')
     cutoff_values = []
@@ -169,8 +181,13 @@ def find_cutoff(image, edge_width, min_cutoff, max_cutoff, cutoff_step, min_rms)
             min_found_rms = current_rms
             best_cutoff = cutoff
 
+    if best_cutoff is None:
+        logger.warning(
+            f"[{image_object.filename}] No cutoff could be found for the image. Skipping.."
+        )
     return best_cutoff
 
 
 def calculate_rms(image):
+    """Find the RMS of an array."""
     return np.sqrt(np.mean(image**2))

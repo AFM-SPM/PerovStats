@@ -27,10 +27,14 @@ filter:
     min_scar_length: 16 # Minimum length of scars in pixels.
 freqsplit:
   run: true
-  cutoff_freq_nm: 396.2 # Frequency to split between for lowpass and highpass information
   edge_width: 0.03 # Width of borders of grains
+  cutoff_bounds: [0, 0.2]
+  cutoff_step: 0.005
+  min_rms: 12
 mask:
   threshold_function: mad # Options: std, mad
+  threshold_bounds: [-1, 3]
+  threshold_step: 0.01
   smoothing:
     smooth_function: gaussian # Options: gaussian, difference_of_gaussians
     sigma: 8

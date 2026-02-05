@@ -11,6 +11,24 @@ from perovstats.classes import Grain, ImageData, PerovStats
 
 BASE_DIR = Path.cwd()
 
+@pytest.fixture
+def basic_grained_image() -> np.array:
+    """Basic image containing a findable grain
+
+    Returns
+    -------
+    np.array
+        Basic image with a grain that can be found
+    """
+    return np.array([
+        [1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 0, 0, 0, 1, 1],
+        [1, 1, 0, 1, 0, 1, 1],
+        [1, 1, 0, 0, 0, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1]
+    ])
 
 @pytest.fixture
 def image_random() -> npt.NDArray:
@@ -23,7 +41,7 @@ def image_random() -> npt.NDArray:
 
     """
     rng = np.random.default_rng(seed=1000)
-    return rng.random((1024, 1024))
+    return rng.random((16, 16))
 
 
 @pytest.fixture
@@ -80,6 +98,7 @@ def dummy_image_data(mask_random, image_random, dummy_grain, tmp_path) -> ImageD
         cutoff_freq_nm=1.32,
         cutoff=0.9,
         pixel_to_nm_scaling=1,
+        threshold=-0.8,
     )
     return image_data
 
