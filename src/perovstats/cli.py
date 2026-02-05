@@ -21,7 +21,6 @@
 
 from __future__ import annotations
 import sys
-import copy
 from pathlib import Path
 from importlib import resources
 from argparse import ArgumentParser
@@ -30,7 +29,6 @@ from argparse import RawDescriptionHelpFormatter
 
 from loguru import logger
 from yaml import safe_load
-from topostats.filters import Filters
 from topostats.io import LoadScans
 import pandas as pd
 
@@ -38,6 +36,7 @@ from .grains import find_grains
 from .fourier import create_masks
 from .statistics import save_to_csv, save_config
 from .classes import ImageData, PerovStats
+from .filters import run_filters
 
 
 def _parse_args(args: list[str]) -> Namespace:
@@ -142,6 +141,9 @@ def get_arg(key: str, args: Namespace, config: dict, default: str | None = None)
     return arg
 
 
+def setup_logger():
+    logger.add("logs/PerovStats-{time:YYYY-MM-DD-HH-mm-ss}.log", level="DEBUG")
+
 def main(args: list[str] | None = None) -> None:
     """
     Entrypoint for perovstats, calls main functions in the process.
@@ -151,6 +153,8 @@ def main(args: list[str] | None = None) -> None:
     args : list[str], optional
         Arguments.
     """
+    setup_logger()
+
     if args is None:
         args = sys.argv[1:]
     args = _parse_args(args)
@@ -198,33 +202,23 @@ def main(args: list[str] | None = None) -> None:
 
     logger.info(f"Loaded {len(perovstats_object.images)} images")
 
-    filter_config = config["filter"]
-    if filter_config["run"]:
-        filter_config.pop("run")
-        logger.info("%s", filter_config)
-        # apply filters
-        for image_data in perovstats_object.images:
-            filename = image_data.filename
-            original_image = image_data.image_original
-            pixel_to_nm_scaling = image_data.pixel_to_nm_scaling
-            logger.debug(f"[{filename}] image dimensions: {original_image.shape}")
-            logger.info(f"[{filename}] : *** Filtering ***")
-            _filter_config = copy.deepcopy(filter_config)
-            filters = Filters(
-                image=original_image,
-                filename=filename,
-                pixel_to_nm_scaling=pixel_to_nm_scaling,
-                **_filter_config,
-            )
-            image_data.pixel_to_nm_scaling = pixel_to_nm_scaling
-            filters.filter_image()
-
     for image_num, image_object in enumerate(perovstats_object.images):
+        logger.info("----------------------------------------------------------")
+        logger.info(f"processing {image_object.filename}")
+        logger.info("----------------------------------------------------------")
+        logger.debug(f"[{filename}] : Image dimensions: {image_object.image_original.shape}")
+        logger.debug(f"[{filename}] : pixel_to_nm_scaling: {image_object.pixel_to_nm_scaling}")
+
+        # Filter images
+        run_filters(perovstats_object.config, image_object)
+
         # Apply fourier analysis and create binary mask of resultant high-pass image
         create_masks(perovstats_object.config, image_object)
 
         # Find grains from mask
         find_grains(perovstats_object.config, image_object, image_num)
+
+        logger.info(f"[{image_object.filename}] : *** Exporting data ***")
 
         # Save image and grain data to their own .csv file
         image_df = pd.DataFrame([image_object.to_dict()])
@@ -244,5 +238,7 @@ def main(args: list[str] | None = None) -> None:
         save_config(perovstats_object.config, output_filename)
 
         logger.info(
-            f"[{filename}] exported to {output_filename}",
+            f"[{filename}] : Exported data and config to {Path(output_dir) / Path(image_object.filename)}",
         )
+
+    logger.success("Process complete.")

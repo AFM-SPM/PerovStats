@@ -183,7 +183,7 @@ def find_cutoff(
 
     if best_cutoff is None:
         logger.warning(
-            f"[{image_object.filename}] No cutoff could be found for the image. Skipping.."
+            f"[{image_object.filename}] : No cutoff could be found for the image. Skipping.."
         )
     return best_cutoff
 

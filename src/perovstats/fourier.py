@@ -51,6 +51,8 @@ def create_masks(config, image_object) -> None:
         elif smooth_func == "difference_of_gaussians":
             smooth_func = ski.filters.difference_of_gaussians
 
+        logger.info(f"[{image_object.filename}] : *** Mask creation ***")
+
         threshold = find_threshold(
             image_object.filename,
             im,
@@ -64,9 +66,12 @@ def create_masks(config, image_object) -> None:
             max_threshold=max_threshold,
             threshold_step=threshold_step,
         )
+        if threshold is None:
+            return
 
         image_object.threshold = threshold
 
+        logger.info(f"[{image_object.filename}] : Creating grain mask")
         np_mask = create_grain_mask(
             im,
             threshold_func=threshold_func,
@@ -112,65 +117,68 @@ def split_frequencies(config, image_object) -> list[np.real]:
     min_rms = freqsplit_config["min_rms"]
     output_dir = Path(config["output_dir"])
 
-    # for image_data in perovstats_object.images:
     filename = image_object.filename
-
     file_output_dir = Path(output_dir / filename)
     file_output_dir.mkdir(parents=True, exist_ok=True)
-
     if image_object.image_flattened is not None:
         image = image_object.image_flattened
     else:
         image = image_object.image_original
-    pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
-    logger.debug(f"[{filename}] image dimensions: {image.shape}")
-    logger.info(f"[{filename}] : pixel_to_nm_scaling: {pixel_to_nm_scaling}")
 
-    cutoff = find_cutoff(
-        image_object,
-        edge_width,
-        min_cutoff=min_cutoff,
-        max_cutoff=max_cutoff,
-        cutoff_step=cutoff_step,
-        min_rms=min_rms,
-    )
+    if freqsplit_config["run"]:
+        pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
 
-    if not cutoff:
-        return
+        logger.info(f"[{filename}] : *** Frequency splitting ***")
+        cutoff = find_cutoff(
+            image_object,
+            edge_width,
+            min_cutoff=min_cutoff,
+            max_cutoff=max_cutoff,
+            cutoff_step=cutoff_step,
+            min_rms=min_rms,
+        )
 
-    cutoff_nm = 2 * pixel_to_nm_scaling / cutoff
+        if not cutoff:
+            return
 
-    # Update image class with chosen cutoff
-    image_object.cutoff = cutoff
-    image_object.cutoff_freq_nm = cutoff_nm
+        cutoff_nm = 2 * pixel_to_nm_scaling / cutoff
+        logger.info(f"[{image_object.filename}] : Frequency cutoff: {cutoff} ({np.round(cutoff_nm, 4)}nm)")
 
-    high_pass, low_pass = frequency_split(
-        image,
-        cutoff=cutoff,
-        edge_width=edge_width,
-    )
+        # Update image class with chosen cutoff
+        image_object.cutoff = cutoff
+        image_object.cutoff_freq_nm = cutoff_nm
 
-    image_object.high_pass = high_pass
-    image_object.low_pass = low_pass
-    image_object.file_directory = file_output_dir
+        logger.info(f"[{filename}] : Splitting image frequencies")
+        high_pass, low_pass = frequency_split(
+            image,
+            cutoff=cutoff,
+            edge_width=edge_width,
+        )
 
-    # Convert to image format
-    arr = high_pass
-    # arr = (arr - arr.min()) / (arr.max() - arr.min())
-    arr = normalise_array(arr)
-    img = Image.fromarray(arr * 255).convert("L")
-    img_dir = Path(file_output_dir) / "images"
-    img_dir.mkdir(parents=True, exist_ok=True)
-    img.save(file_output_dir / "images" / f"{filename}_high_pass.jpg")
+        image_object.high_pass = high_pass
+        image_object.low_pass = low_pass
+        image_object.file_directory = file_output_dir
 
-    arr = low_pass
-    # arr = (arr - arr.min()) / (arr.max() - arr.min())
-    arr = normalise_array(arr)
-    img = Image.fromarray(arr * 255).convert("L")
-    img.save(file_output_dir / "images" / f"{filename}_low_pass.jpg")
+        # Convert high-pass and low-pass to image format
+        arr = high_pass
+        arr = normalise_array(arr)
+        img = Image.fromarray(arr * 255).convert("L")
+        img_dir = Path(file_output_dir) / "images"
+        img_dir.mkdir(parents=True, exist_ok=True)
+        img.save(file_output_dir / "images" / f"{filename}_high_pass.jpg")
+
+        arr = low_pass
+        arr = normalise_array(arr)
+        img = Image.fromarray(arr * 255).convert("L")
+        img.save(file_output_dir / "images" / f"{filename}_low_pass.jpg")
+    else:
+        logger.info(f"[{image_object.filename}] : Frequency splitting is disabled by config, the original image will be used.")
+        if image_object.image_flattened is not None:
+            image_object.high_pass = image_object.image_flattened
+        else:
+            image_object.high_pass = image_object.image_original
 
     arr = image_object.image_original
-    # arr = (arr - arr.min()) / (arr.max() - arr.min())
     arr = normalise_array(arr)
     img = Image.fromarray(arr * 255).convert("L")
     img.save(file_output_dir / "images" / f"{filename}_original.jpg")
@@ -225,6 +233,8 @@ def find_threshold(
     float
         The selected best threshold.
     """
+    logger.info(f"[{filename}] : Finding threshold")
+
     best_threshold = None
     best_grain_num = 0
     for curr_threshold in np.arange(min_threshold, max_threshold, threshold_step):
@@ -256,6 +266,11 @@ def find_threshold(
             best_grain_num = len(mask_areas)
             best_threshold = curr_threshold
 
-    logger.info(f"[{filename}] best threshold found: {best_threshold} which finds {best_grain_num} grains.")
+    if best_grain_num == 0:
+        logger.warning(f"[{filename}] : No grains could be found for any tested threshold.",
+                       "consider increasing the threshold bounds in the config.",
+                       "Skipping image..")
+        return None
 
+    logger.info(f"[{filename}] : Best threshold found: {best_threshold}")
     return best_threshold
