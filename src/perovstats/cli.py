@@ -20,7 +20,6 @@
 """Command-line interface for PerovStats workflow."""
 
 from __future__ import annotations
-import logging
 import sys
 import copy
 from pathlib import Path
@@ -29,18 +28,16 @@ from argparse import ArgumentParser
 from argparse import Namespace
 from argparse import RawDescriptionHelpFormatter
 
+from loguru import logger
 from yaml import safe_load
 from topostats.filters import Filters
 from topostats.io import LoadScans
 import pandas as pd
-from loguru import logger
 
 from .grains import find_grains
 from .fourier import create_masks
 from .statistics import save_to_csv, save_config
 from .classes import ImageData, PerovStats
-
-LOGGER = logging.getLogger(__name__)
 
 
 def _parse_args(args: list[str]) -> Namespace:
@@ -100,7 +97,6 @@ def _parse_args(args: list[str]) -> Namespace:
         "-f",
         "--cutoff_freq_nm",
         type=float,
-        default=396.2,
         help="Cutoff frequency in nm",
     )
     parser.add_argument(
@@ -155,7 +151,6 @@ def main(args: list[str] | None = None) -> None:
     args : list[str], optional
         Arguments.
     """
-    logging.basicConfig(filename="perovstats.log", level=logging.INFO)
     if args is None:
         args = sys.argv[1:]
     args = _parse_args(args)
@@ -173,13 +168,6 @@ def main(args: list[str] | None = None) -> None:
 
     # Update from command line arguments if specified
     fs_config.update({k: v for k, v in vars(args).items() if v is not None})
-
-    cutoff = fs_config.get("cutoff")
-    cutoff_freq_nm = fs_config.get("cutoff_freq_nm")
-
-    if not (cutoff or cutoff_freq_nm):
-        msg = "Must supply either `cutoff` or `cutoff_freq_nm`"
-        raise ValueError(msg)
 
     # Non-recursively find files
     base_dir = get_arg("base_dir", args, config, "./")
@@ -208,19 +196,19 @@ def main(args: list[str] | None = None) -> None:
             image_flattened=None)
         perovstats_object.images.append(image_data)
 
-    LOGGER.info("Loaded %s images", len(perovstats_object.images))
+    logger.info(f"Loaded {len(perovstats_object.images)} images")
 
     filter_config = config["filter"]
     if filter_config["run"]:
         filter_config.pop("run")
-        LOGGER.info("%s", filter_config)
+        logger.info("%s", filter_config)
         # apply filters
         for image_data in perovstats_object.images:
             filename = image_data.filename
             original_image = image_data.image_original
             pixel_to_nm_scaling = image_data.pixel_to_nm_scaling
-            LOGGER.debug("[%s] Image dimensions: %s", filename, original_image.shape)
-            LOGGER.info("[%s] : *** Filtering ***", filename)
+            logger.debug(f"[{filename}] image dimensions: {original_image.shape}")
+            logger.info(f"[{filename}] : *** Filtering ***")
             _filter_config = copy.deepcopy(filter_config)
             filters = Filters(
                 image=original_image,
@@ -228,16 +216,16 @@ def main(args: list[str] | None = None) -> None:
                 pixel_to_nm_scaling=pixel_to_nm_scaling,
                 **_filter_config,
             )
-            perovstats_object.config["pixel_to_nm_scaling"] = pixel_to_nm_scaling
+            image_data.pixel_to_nm_scaling = pixel_to_nm_scaling
             filters.filter_image()
 
-    # Apply fourier analysis and create binary mask of resultant high-pass image
-    create_masks(perovstats_object)
+    for image_num, image_object in enumerate(perovstats_object.images):
+        # Apply fourier analysis and create binary mask of resultant high-pass image
+        create_masks(perovstats_object.config, image_object)
 
-    # Find grains from mask
-    find_grains(perovstats_object)
+        # Find grains from mask
+        find_grains(perovstats_object.config, image_object, image_num)
 
-    for image_object in perovstats_object.images:
         # Save image and grain data to their own .csv file
         image_df = pd.DataFrame([image_object.to_dict()])
         grains_list = []
@@ -256,5 +244,5 @@ def main(args: list[str] | None = None) -> None:
         save_config(perovstats_object.config, output_filename)
 
         logger.info(
-            f"exported to {output_filename}",
+            f"[{filename}] exported to {output_filename}",
         )

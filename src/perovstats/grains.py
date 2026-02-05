@@ -1,10 +1,9 @@
 from __future__ import annotations
-import logging
 from pathlib import Path
 
+from loguru import logger
 import numpy as np
 import numpy.typing as npt
-from loguru import logger
 from skimage.color import label2rgb
 from skimage.measure import label
 from skimage.measure import regionprops
@@ -13,13 +12,9 @@ from skimage import morphology
 from .classes import Grain, PerovStats
 from .visualisation import create_plots
 
-LOGGER = logging.getLogger(__name__)
 
 # Data directory
 DATA_DIR = Path("./output")
-
-# Annotated data
-DATA_ANNOTATED = Path("path/to/perovskites_data_notated.csv")
 
 NM_TO_MICRON = 1e-3
 
@@ -27,7 +22,7 @@ config_yaml_files = list(DATA_DIR.glob("*/**/*_config.yaml"))
 logger.info(f"found {len(config_yaml_files)} config files")
 
 
-def find_grains(perovstats_object: PerovStats) -> None:
+def find_grains(config, image_object, image_num) -> None:
     """
     Method to find grains from a mask and list the stats about them.
 
@@ -42,89 +37,69 @@ def find_grains(perovstats_object: PerovStats) -> None:
         The updated class object.
     """
     all_masks_grain_areas = []
-    all_masks_data = {}
     data = []
+    filename = image_object.filename
+    config_yaml = config
+    pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
 
-    for image_num, image_object in enumerate(perovstats_object.images):
-        filename = image_object.filename
-        file_directory = image_object.file_directory
+    logger.info(f"processing file {image_object.filename:<50}")
 
-        LOGGER.info(f"processing file {image_object.filename:<50}")
+    mask = image_object.mask.astype(bool)
+    mask = np.invert(mask)
+    labelled_mask = label(mask, connectivity=1)
 
-        config_yaml = perovstats_object.config
+    # Remove grains touching the edge
+    labelled_mask = tidy_border(labelled_mask)
+    labelled_mask_rgb = label2rgb(labelled_mask, bg_label=0, saturation=0)
 
-        pixel_to_nm_scaling = config_yaml["pixel_to_nm_scaling"]
+    mask_regionprops = regionprops(labelled_mask)
+    mask_areas = [
+        regionprop.area * pixel_to_nm_scaling**2 for regionprop in mask_regionprops
+    ]
+    all_masks_grain_areas.extend(mask_areas)
 
-        mask = image_object.mask.astype(bool)
-        mask = np.invert(mask)
+    mask_size_x_nm = mask.shape[1] * pixel_to_nm_scaling
+    mask_size_y_nm = mask.shape[0] * pixel_to_nm_scaling
+    mask_area_nm = mask_size_x_nm * mask_size_y_nm
+    grains_per_nm2 = len(mask_areas) / mask_area_nm
 
-        labelled_mask = label(mask, connectivity=1)
-        # labelled_mask_rgb = label2rgb(labelled_mask, bg_label=0)
-
-        # Remove grains touching the edge
-        labelled_mask = tidy_border(labelled_mask)
-        labelled_mask_rgb = label2rgb(labelled_mask, bg_label=0, saturation=0)
-
-        mask_regionprops = regionprops(labelled_mask)
-        mask_areas = [
-            regionprop.area * pixel_to_nm_scaling**2 for regionprop in mask_regionprops
-        ]
-        all_masks_grain_areas.extend(mask_areas)
-
-        mask_size_x_nm = mask.shape[1] * pixel_to_nm_scaling
-        mask_size_y_nm = mask.shape[0] * pixel_to_nm_scaling
-        mask_area_nm = mask_size_x_nm * mask_size_y_nm
-        grains_per_nm2 = len(mask_areas) / mask_area_nm
-
+    if len(mask_areas) > 0:
         mean_grain_size = find_mean_grain_size(mask_areas)
         median_grain_size = find_median_grain_size(mask_areas)
         mode_grain_size = find_mode_grain_size(mask_areas)
+    else:
+        mean_grain_size = 0
+        median_grain_size = 0
+        mode_grain_size = 0
 
-        mask_data = {
-            "mask_rgb": labelled_mask_rgb,
-            "grains_per_nm2": grains_per_nm2,
-            "mask_size_x_nm": mask_size_x_nm,
-            "mask_size_y_nm": mask_size_y_nm,
-            "mask_area_nm": mask_area_nm,
-            "num_grains": len(mask_areas),
-            "mean_grain_size": mean_grain_size,
-            "median_grain_size": median_grain_size,
-            "mode_grain_size": mode_grain_size
-        }
-        all_masks_data[f"{filename}-{config_yaml['freqsplit']['cutoff_freq_nm']}"] = mask_data
+    mask_data = {
+        "filename": filename,
+        "mask_rgb": labelled_mask_rgb,
+        "grains_per_nm2": grains_per_nm2,
+        "mask_size_x_nm": mask_size_x_nm,
+        "mask_size_y_nm": mask_size_y_nm,
+        "mask_area_nm": mask_area_nm,
+        "num_grains": len(mask_areas),
+        "mean_grain_size": mean_grain_size,
+        "median_grain_size": median_grain_size,
+        "mode_grain_size": mode_grain_size
+    }
 
-        new_mask_data = {
-            "filename": filename,
-            "mask_rgb": labelled_mask_rgb,
-            "grains_per_nm2": grains_per_nm2,
-            "mask_size_x_nm": mask_size_x_nm,
-            "mask_size_y_nm": mask_size_y_nm,
-            "mask_area_nm": mask_area_nm,
-            "num_grains": len(mask_areas),
-            "cutoff_freq_nm": config_yaml["freqsplit"]["cutoff_freq_nm"],
-            "cutoff": config_yaml["freqsplit"]["cutoff"],
-            "mean_grain_size": mean_grain_size,
-            "median_grain_size": median_grain_size,
-            "mode_grain_size": mode_grain_size
-        }
-
-        data.append(new_mask_data)
+    data.append(mask_data)
 
 
-        # Assign area data for individual grains to appropriate classes
-        for key, value in new_mask_data.items():
-            setattr(image_object, key, value)
-        image_object.grains = {}
-        for i, grain_area in enumerate(mask_areas):
-            image_object.grains[i] = Grain(grain_id=i, grain_area=grain_area)
+    # Assign area data for individual grains to appropriate classes
+    for key, value in mask_data.items():
+        setattr(image_object, key, value)
+    image_object.grains = {}
+    for i, grain_area in enumerate(mask_areas):
+        image_object.grains[i] = Grain(grain_id=i, grain_area=grain_area)
 
-        logger.info(
-            f"~~~ obtained {image_object.num_grains} grains from mask {image_num} ~~~",
-        )
+    logger.info(
+        f"[{filename}] obtained {image_object.num_grains} grains from mask {image_num}",
+    )
 
-        create_plots(Path(config_yaml["output_dir"]) / filename / "images", filename, mask_areas, new_mask_data, nm_to_micron=NM_TO_MICRON)
-
-        perovstats_object.images[image_num] = image_object
+    create_plots(Path(config_yaml["output_dir"]) / filename / "images", filename, mask_areas, mask_data, nm_to_micron=NM_TO_MICRON)
 
 
 def find_median_grain_size(values):

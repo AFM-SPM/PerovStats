@@ -36,8 +36,12 @@ def test_grain_to_dict(
                 'mask_area_nm': 100,
                 'mask_size_x_nm': 10,
                 'mask_size_y_nm': 10,
+                'mean_grain_size_nm2': None,
+                'median_grain_size_nm2': None,
+                'mode_grain_size_nm2': None,
                 'num_grains': 1,
                 'pixel_to_nm_scaling': 1,
+                'threshold': -0.8,
             }
         )
     ]

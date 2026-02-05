@@ -1,7 +1,14 @@
 import pytest
 import numpy as np
 
-from perovstats.freqsplit import extend_image, create_frequency_mask, frequency_split
+from perovstats.classes import ImageData
+from perovstats.freqsplit import (
+    extend_image,
+    create_frequency_mask,
+    frequency_split,
+    find_cutoff,
+    calculate_rms
+)
 
 def test_extend_image(image_random: np.ndarray) -> None:
     """Test extending an image."""
@@ -53,13 +60,82 @@ def test_create_frequency_mask(shape: tuple, cutoff: float, width: float) -> Non
     assert x.shape == shape
 
 
-
 def test_frequency_split(image_random):
-    """Test splitting an image between a given frequency cutoff."""
-    cutoff = 0.05
-    edge_width = 0
-    high_pass, low_pass = frequency_split(image_random, cutoff, edge_width)
+    """Test splitting an image between background and foreground patterns."""
+    high_pass, low_pass = frequency_split(image_random, cutoff=1, edge_width=0.03)
 
     assert high_pass.shape == image_random.shape
     assert low_pass.shape == image_random.shape
     assert np.allclose((high_pass + low_pass), image_random)
+
+
+@pytest.mark.parametrize(
+    ("edge_width", "min_cutoff", "max_cutoff", "cutoff_step", "min_rms", "expected"),
+    [
+        pytest.param(
+            0.03,
+            0,
+            10,
+            1,
+            0,
+            1,
+            id="Successful cutoff calculation"
+        ),
+        pytest.param(
+            0.03,
+            0,
+            10,
+            1,
+            10,
+            None,
+            id="No cutoff found"
+        ),
+    ]
+)
+def test_find_cutoff(
+    dummy_image_data: ImageData,
+    edge_width: float,
+    min_cutoff: float,
+    max_cutoff: float,
+    cutoff_step: float,
+    min_rms: float,
+    expected: float | None,
+):
+    """Test finding in ideal cutoff for given image."""
+    cutoff = find_cutoff(
+        image_object=dummy_image_data,
+        edge_width=edge_width,
+        min_cutoff=min_cutoff,
+        max_cutoff=max_cutoff,
+        cutoff_step=cutoff_step,
+        min_rms=min_rms,
+    )
+    assert cutoff == expected
+
+
+@pytest.mark.parametrize(
+    ("image", "expected"),
+    [
+        pytest.param(
+            np.array([
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 0, 0]
+            ]),
+            0,
+            id="No roughness"
+        ),
+        pytest.param(
+            np.array([
+                [0, 0.1, 0.6],
+                [0.2, 0.5, 0.4],
+                [0.1, 0.3, 0.2]
+            ]),
+            0.32659863237109044,
+            id="Medium roughness"
+        )
+    ]
+)
+def test_calculate_rms(image: np.array, expected: float):
+    rms = calculate_rms(image)
+    assert rms == expected

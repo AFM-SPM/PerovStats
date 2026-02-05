@@ -66,6 +66,8 @@ class ImageData:
         The frequency to cutoff during the highpass of the fourier transform in nm.
     cutoff : float
         The actual cutoff for the fourier transform.
+    pixel_to_nm_scaling : float
+
     """
     image_original: np.ndarray | None = None
     image_flattened: np.ndarray | None = None
@@ -83,26 +85,28 @@ class ImageData:
     num_grains: int | None = None
     cutoff_freq_nm: float | None = None
     cutoff: float | None = None
-    pixel_to_nm_scaling: float | None = None
     mean_grain_size: float | None = None
     median_grain_size: float | None = None
     mode_grain_size: float | None = None
+    pixel_to_nm_scaling: float | None = None
+    threshold: float | None = None
 
     def to_dict(self) -> dict:
         return {
             "file_dir": self.file_directory,
             "filename": self.filename,
+            "threshold": self.threshold,
             "num_grains": self.num_grains,
             "grains_per_nm2": self.grains_per_nm2,
             "mask_size_x_nm": self.mask_size_x_nm,
             "mask_size_y_nm": self.mask_size_y_nm,
             "mask_area_nm": self.mask_area_nm,
+            "pixel_to_nm_scaling": self.pixel_to_nm_scaling,
             "cutoff_freq_nm": self.cutoff_freq_nm,
             "cutoff": self.cutoff,
-            "pixel_to_nm_scaling": self.pixel_to_nm_scaling,
             "mean_grain_size_nm2": self.mean_grain_size,
             "median_grain_size_nm2": self.median_grain_size,
-            "mode_grain_size_nm2": self.mode_grain_size
+            "mode_grain_size_nm2": self.mode_grain_size,
         }
 
 
