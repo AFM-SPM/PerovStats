@@ -7,14 +7,14 @@ from perovstats.fourier import split_frequencies, create_masks, normalise_array,
 from perovstats.segmentation import threshold_mad, threshold_mean_std
 
 def test_create_masks(dummy_perovstats_object: PerovStats, image_random):
-    dummy_image = dummy_perovstats_object.images[0]
-    dummy_image.image_original = image_random
-    dummy_image.high_pass = None
-    dummy_image.low_pass = None
+    image_data = dummy_perovstats_object.images[0]
+    image_data.image_original = image_random
+    image_data.high_pass = None
+    image_data.low_pass = None
 
-    create_masks(dummy_perovstats_object)
+    create_masks(dummy_perovstats_object.config, image_data)
 
-    assert dummy_image.mask.shape == dummy_image.image_original.shape
+    assert image_data.mask.shape == image_data.image_original.shape
 
 
 @pytest.mark.parametrize(
@@ -31,17 +31,19 @@ def test_create_masks(dummy_perovstats_object: PerovStats, image_random):
     ]
 )
 def test_split_frequencies(image, dummy_perovstats_object: PerovStats):
-    dummy_perovstats_object.images[0].high_pass = None
-    dummy_perovstats_object.images[0].low_pass = None
-    dummy_perovstats_object.config["freqsplit"]["cutoff_bounds"] = [0, 10]
-    dummy_perovstats_object.config["freqsplit"]["cutoff_step"] = 1
-    dummy_perovstats_object.config["freqsplit"]["min_rms"] = 0
+    config = dummy_perovstats_object.config
+    image_data = dummy_perovstats_object.images[0]
+    image_data.high_pass = None
+    image_data.low_pass = None
+    config["freqsplit"]["cutoff_bounds"] = [0, 10]
+    config["freqsplit"]["cutoff_step"] = 1
+    config["freqsplit"]["min_rms"] = 0
 
-    split_frequencies(dummy_perovstats_object)
+    split_frequencies(config, image_data)
 
-    high_pass = dummy_perovstats_object.images[0].high_pass
-    low_pass = dummy_perovstats_object.images[0].low_pass
-    image = dummy_perovstats_object.images[0].image_original
+    high_pass = image_data.high_pass
+    low_pass = image_data.low_pass
+    image = image_data.image_original
 
     assert high_pass.shape == image.shape
     assert low_pass.shape == image.shape
@@ -87,6 +89,7 @@ def test_normalise_array(arr: np.array, expected: np.array):
 
 @pytest.mark.parametrize(
         (
+            "filename",
             "threshold_func",
             "smooth_sigma",
             "smooth_func",
@@ -100,6 +103,7 @@ def test_normalise_array(arr: np.array, expected: np.array):
         ),
         [
             pytest.param(
+                "dummy_filename",
                 threshold_mad,
                 8,
                 ski.filters.gaussian,
@@ -113,6 +117,7 @@ def test_normalise_array(arr: np.array, expected: np.array):
                 id="mad thresholding function"
             ),
             pytest.param(
+                "dummy_filename",
                 threshold_mad,
                 8,
                 ski.filters.gaussian,
@@ -128,6 +133,7 @@ def test_normalise_array(arr: np.array, expected: np.array):
         ]
 )
 def test_find_threshold(
+    filename: str,
     basic_grained_image: np.ndarray,
     threshold_func: callable,
     smooth_sigma: float,
@@ -141,6 +147,7 @@ def test_find_threshold(
     expected: float,
 ):
     threshold = find_threshold(
+        filename,
         basic_grained_image,
         threshold_func,
         smooth_sigma,
