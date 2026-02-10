@@ -12,12 +12,15 @@ class Grain:
     ----------
     grain_id : int | None
         Unique identifier for the grain.
+    grain_mask : np.ndarray | None
+        A binary mask of the outline of the singular grain.
     grain_area : float | None
         Area of the grain in nm^2.
     grain_circularity_rating : float | None
         Unifinished var.
     """
     grain_id: int
+    grain_mask: np.ndarray | None = None
     grain_area: float | None = None
     grain_circularity_rating: float | None = None
 

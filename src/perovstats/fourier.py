@@ -33,7 +33,6 @@ def create_masks(config, image_object) -> None:
             threshold_func = threshold_mean_std
         min_threshold = config["mask"]["threshold_bounds"][0]
         max_threshold = config["mask"]["threshold_bounds"][1]
-        threshold_step = config["mask"]["threshold_step"]
 
         # Cleaning config options
         area_threshold = config["mask"]["cleaning"]["area_threshold"]
@@ -64,7 +63,6 @@ def create_masks(config, image_object) -> None:
             pixel_to_nm_scaling=pixel_to_nm_scaling,
             min_threshold=min_threshold,
             max_threshold=max_threshold,
-            threshold_step=threshold_step,
         )
         if threshold is None:
             return
@@ -193,18 +191,17 @@ def normalise_array(arr):
 
 
 def find_threshold(
-        filename: str,
-        image: np.ndarray,
-        threshold_func: callable,
-        smooth_sigma: float,
-        smooth_func,
-        area_threshold,
-        disk_radius,
-        pixel_to_nm_scaling,
-        min_threshold,
-        max_threshold,
-        threshold_step,
-    ):
+    filename: str,
+    image: np.ndarray,
+    threshold_func: callable,
+    smooth_sigma: float,
+    smooth_func,
+    area_threshold,
+    disk_radius,
+    pixel_to_nm_scaling,
+    min_threshold,
+    max_threshold,
+):
     """
     Loop through possible threshold values and select the value
     that produces the most grains.
@@ -237,6 +234,7 @@ def find_threshold(
 
     best_threshold = None
     best_grain_num = 0
+    threshold_step = (max_threshold - min_threshold) / 50
     for curr_threshold in np.arange(min_threshold, max_threshold, threshold_step):
         curr_threshold = round(curr_threshold, 3)
         np_mask = create_grain_mask(
