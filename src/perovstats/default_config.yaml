@@ -33,11 +33,10 @@ freqsplit:
   min_rms: 12 # Minimum roughness mean score of a high-pass after splitting along the cutoff.
 mask:
   threshold_function: mad # Options: std, mad.
-  threshold_bounds: [0, 3] # Minimum and maximum thresholds for masking.
-  threshold_step: 0.05 # Amount to increase the tested threshold by each iteration.
+  threshold_bounds: [0, 4] # Minimum and maximum thresholds for masking.
   smoothing:
     smooth_function: gaussian # Options: gaussian, difference_of_gaussians.
     sigma: 8
   cleaning:
-    area_threshold: 10000 # in nm2
+    area_threshold: 10000 # in nm2.
     disk_radius_factor: 40

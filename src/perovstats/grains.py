@@ -9,7 +9,7 @@ from skimage.measure import label
 from skimage.measure import regionprops
 from skimage import morphology
 
-from .classes import Grain, PerovStats
+from .classes import Grain
 from .visualisation import create_plots
 
 
@@ -56,6 +56,12 @@ def find_grains(config, image_object, image_num) -> None:
     mask_areas = [
         regionprop.area * pixel_to_nm_scaling**2 for regionprop in mask_regionprops
     ]
+    mask_perimeters = [
+        regionprop.perimeter_crofton * pixel_to_nm_scaling for regionprop in mask_regionprops
+    ]
+    mask_images = [
+        regionprop.image for regionprop in mask_regionprops
+    ]
     all_masks_grain_areas.extend(mask_areas)
 
     mask_size_x_nm = mask.shape[1] * pixel_to_nm_scaling
@@ -93,7 +99,8 @@ def find_grains(config, image_object, image_num) -> None:
         setattr(image_object, key, value)
     image_object.grains = {}
     for i, grain_area in enumerate(mask_areas):
-        image_object.grains[i] = Grain(grain_id=i, grain_area=grain_area)
+        grain_circularity = find_circularity_rating(grain_area, mask_perimeters[i])
+        image_object.grains[i] = Grain(grain_id=i, grain_mask=mask_images[i], grain_area=grain_area, grain_circularity_rating=grain_circularity)
 
     logger.info(
         f"[{filename}] : Obtained {image_object.num_grains} grains",
@@ -152,3 +159,11 @@ def tidy_border(mask: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
             mask[mask_labelled == region.label] = 0
 
     return mask
+
+
+def find_circularity_rating(grain_area, grain_perimeter) -> float:
+    """
+    Take a grain mask and use the isoperimetric ratio to give it a rating (0 - 1)
+    for how circular it is.
+    """
+    return (4 * np.pi * grain_area) / (grain_perimeter * grain_perimeter)
