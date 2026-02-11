@@ -1,12 +1,10 @@
 import matplotlib
-matplotlib.use("Agg")
+# matplotlib.use("Agg")
 
 from yaml import safe_load
 from pathlib import Path
 import numpy as np
-import numpy.typing as npt
 import pytest
-import pickle
 
 from perovstats.classes import Grain, ImageData, PerovStats
 
@@ -14,46 +12,41 @@ BASE_DIR = Path.cwd()
 
 
 @pytest.fixture
-def default_config() -> dict:
+def default_config(tmp_path) -> dict:
     config_path = BASE_DIR / "src" / "perovstats" / "default_config.yaml"
     with open(config_path, "r", encoding="utf-8") as f:
         config = safe_load(f)
-    config["freqsplit"]["cutoff"] = 1
+    config["output_dir"] = tmp_path
     return config
 
 
 @pytest.fixture
 def dummy_grain_mask() -> np.ndarray:
-    with open('./tests/resources/single_grain_mask.pkl', 'rb') as file:
-        arr = pickle.load(file)
-    return arr
-
-
-@pytest.fixture
-def dummy_original_image() -> np.ndarray:
-    with open('./tests/resources/small_original.pkl', 'rb') as file:
-        arr = pickle.load(file)
-    return arr
-
-
-@pytest.fixture
-def dummy_high_pass() -> np.ndarray:
-    with open('./tests/resources/small_high_pass.pkl', 'rb') as file:
-        arr = pickle.load(file)
-    return arr
-
-
-@pytest.fixture
-def dummy_low_pass() -> np.ndarray:
-    with open('./tests/resources/small_low_pass.pkl', 'rb') as file:
-        arr = pickle.load(file)
+    arr = np.load("./tests/resources/single_grain_mask.npy")
     return arr
 
 
 @pytest.fixture
 def dummy_mask() -> np.ndarray:
-    with open('./tests/resources/small_mask.pkl', 'rb') as file:
-        arr = pickle.load(file)
+    arr = np.load("./tests/resources/small_mask.npy")
+    return arr
+
+
+@pytest.fixture
+def dummy_original_image() -> np.ndarray:
+    arr = np.load("./tests/resources/small_image_original.npy")
+    return arr
+
+
+@pytest.fixture
+def dummy_high_pass() -> np.ndarray:
+    arr = np.load("./tests/resources/small_high_pass.npy")
+    return arr
+
+
+@pytest.fixture
+def dummy_low_pass() -> np.ndarray:
+    arr = np.load("./tests/resources/small_low_pass.npy")
     return arr
 
 
@@ -99,6 +92,6 @@ def dummy_image_data_object(dummy_mask, dummy_high_pass, dummy_low_pass, dummy_o
 def dummy_perovstats_object(dummy_image_data_object, default_config) -> PerovStats:
     perovstats_object = PerovStats(
         images=[dummy_image_data_object],
-        config=default_config
+        config=default_config,
     )
     return perovstats_object

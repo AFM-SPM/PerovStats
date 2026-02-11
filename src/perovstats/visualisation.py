@@ -1,49 +1,25 @@
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
-from loguru import logger
 import numpy.typing as npt
-import seaborn as sns
 from pathlib import Path
-
-CUTOFF_FREQ_NM = 250
 
 
 def create_plots(
         output_dir: str,
         filename: str,
-        mask_areas: list,
         mask_data: dict[str, dict[str, npt.NDArray | float]],
         nm_to_micron: float,
 ):
     """Show plots for grain area distribution and the rgb image of identified grains"""
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-    # fig.canvas.manager.set_window_title("Grain size distributions")
-    # plot_areas(mask_areas, nm_to_micron, title="grain area distribution", units="nm", ax=axes[0])
+    _, axes = plt.subplots(1, 2, figsize=(12, 5))
     plot_coloured_grains(filename, nm_to_micron, mask_data, ax=axes[1])
     plt.tight_layout()
     plot_name = filename + "_coloured_grains.jpg"
+    out_path = Path(output_dir)
+    out_path.mkdir(parents=True, exist_ok=True)
     plt.savefig(Path(output_dir) / plot_name, dpi=300, bbox_inches="tight")
     plt.close()
-
-
-def plot_areas(areas: list, nm_to_micron: float, title: str | None = None, units: str = "um", ax=None) -> None:
-    """Plot histogram of mask areas."""
-    if ax is None:
-        plt.gca()
-    if title is None:
-        title = ""
-    if units == "um":
-        areas = [area * nm_to_micron**2 for area in areas]
-        ax.set_xlabel("area (µm²)")
-    elif units == "nm":
-        ax.set_xlabel("area (nm²)")
-    else:
-        msg = "units must be 'um' or 'nm'"
-        raise ValueError(msg)
-    sns.histplot(areas, kde=True, bins="auto", log_scale=True, ax=ax)
-    ax.set_title(title)
-    ax.set_ylabel("count")
 
 
 def plot_coloured_grains(

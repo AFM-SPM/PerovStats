@@ -10,6 +10,7 @@ from skimage import morphology
 
 from .classes import Grain
 from .visualisation import create_plots
+from .statistics import find_circularity_rating
 
 
 # Data directory
@@ -21,7 +22,7 @@ config_yaml_files = list(DATA_DIR.glob("*/**/*_config.yaml"))
 logger.info(f"found {len(config_yaml_files)} config files")
 
 
-def find_grains(config, image_object, image_num) -> None:
+def find_grains(config, image_object) -> None:
     """
     Method to find grains from a mask and list the stats about them.
 
@@ -105,7 +106,7 @@ def find_grains(config, image_object, image_num) -> None:
         f"[{filename}] : Obtained {image_object.num_grains} grains",
     )
 
-    create_plots(Path(config_yaml["output_dir"]) / filename / "images", filename, mask_areas, mask_data, nm_to_micron=NM_TO_MICRON)
+    create_plots(Path(config_yaml["output_dir"]) / filename / "images", filename, mask_data, nm_to_micron=NM_TO_MICRON)
 
 
 def find_median_grain_size(values):
@@ -158,11 +159,3 @@ def tidy_border(mask: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
             mask[mask_labelled == region.label] = 0
 
     return mask
-
-
-def find_circularity_rating(grain_area, grain_perimeter) -> float:
-    """
-    Take a grain mask and use the isoperimetric ratio to give it a rating (0 - 1)
-    for how circular it is.
-    """
-    return (4 * np.pi * grain_area) / (grain_perimeter * grain_perimeter)

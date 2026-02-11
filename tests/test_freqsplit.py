@@ -86,7 +86,7 @@ def test_frequency_split(dummy_original_image):
             0,
             10,
             1,
-            100,
+            1000,
             None,
             id="No cutoff found"
         ),

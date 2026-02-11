@@ -6,7 +6,7 @@ from perovstats.classes import PerovStats
 from perovstats.fourier import split_frequencies, create_masks, normalise_array, find_threshold
 from perovstats.segmentation import threshold_mad, threshold_mean_std
 
-def test_create_masks(dummy_perovstats_object: PerovStats, dummy_original_image):
+def test_create_masks(dummy_perovstats_object: PerovStats):
     image_data = dummy_perovstats_object.images[0]
 
     create_masks(dummy_perovstats_object.config, image_data)
@@ -83,7 +83,7 @@ def test_normalise_array(arr: np.array, expected: np.array):
 
     assert np.allclose(norm_arr, expected)
 
-@pytest.mark.xfail(reason="Waiting for images with findable grains + other thresholding method")
+
 @pytest.mark.parametrize(
         (
             "filename",
@@ -92,10 +92,9 @@ def test_normalise_array(arr: np.array, expected: np.array):
             "smooth_func",
             "area_threshold",
             "disk_radius",
-            "pixel_to_nm_scaling",
             "min_threshold",
             "max_threshold",
-            "threshold_step",
+            "pixel_to_nm_scaling",
             "expected"
         ),
         [
@@ -104,14 +103,13 @@ def test_normalise_array(arr: np.array, expected: np.array):
                 threshold_mad,
                 8,
                 ski.filters.gaussian,
-                1000,
-                4,
-                0.01,
+                10000,
+                40,
                 0,
-                1,
-                0.5,
-                0.5,
-                id="mad thresholding function"
+                4,
+                19.53125,
+                1.92,
+                id="mad thresholding"
             ),
             pytest.param(
                 "dummy_filename",
@@ -120,41 +118,40 @@ def test_normalise_array(arr: np.array, expected: np.array):
                 ski.filters.gaussian,
                 10000,
                 40,
-                1,
                 0,
-                5,
-                0.5,
-                4.5,
-                id="std thresholding function"
+                4,
+                19.53125,
+                2.0,
+                id="std thresholding"
             )
         ]
 )
 def test_find_threshold(
     filename: str,
-    dummy_grain_mask: np.ndarray,
+    dummy_high_pass,
     threshold_func: callable,
     smooth_sigma: float,
     smooth_func: callable,
     area_threshold: float,
     disk_radius: float,
-    pixel_to_nm_scaling: float,
     min_threshold: float,
     max_threshold: float,
-    threshold_step: float,
+    pixel_to_nm_scaling: float,
     expected: float,
 ):
+    area_threshold = area_threshold / (pixel_to_nm_scaling**2)
+    disk_radius = disk_radius / pixel_to_nm_scaling
+
     threshold = find_threshold(
         filename,
-        dummy_grain_mask,
+        dummy_high_pass,
         threshold_func,
         smooth_sigma,
         smooth_func,
         area_threshold,
         disk_radius,
-        pixel_to_nm_scaling,
         min_threshold=min_threshold,
         max_threshold=max_threshold,
-        threshold_step=threshold_step,
     )
 
     assert threshold == expected
