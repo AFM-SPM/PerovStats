@@ -2,6 +2,7 @@ import pytest
 
 from perovstats.classes import Grain, ImageData
 
+
 @pytest.mark.parametrize(
     ("expected"),
     [
@@ -15,10 +16,10 @@ from perovstats.classes import Grain, ImageData
     ]
 )
 def test_grain_to_dict(
-        dummy_grain: Grain,
+        dummy_grain_object: Grain,
         expected: dict,
 ):
-    grain_dict = dummy_grain.to_dict()
+    grain_dict = dummy_grain_object.to_dict()
 
     assert grain_dict == expected
 
@@ -30,7 +31,7 @@ def test_grain_to_dict(
             {
                 'cutoff': 0.9,
                 'cutoff_freq_nm': 1.32,
-                'file_dir': 'file/dir',
+                'file_dir': 'tmp_path',
                 'filename': 'dummy_filename',
                 'grains_per_nm2': 2,
                 'mask_area_nm': 100,
@@ -47,9 +48,11 @@ def test_grain_to_dict(
     ]
 )
 def test_image_data_to_dict(
-        dummy_image_data: ImageData,
+        dummy_image_data_object: ImageData,
         expected: dict,
+        tmp_path,
 ):
-    image_data_dict = dummy_image_data.to_dict()
+    expected["file_dir"] = tmp_path
+    image_data_dict = dummy_image_data_object.to_dict()
 
     assert image_data_dict == expected

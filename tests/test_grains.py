@@ -15,6 +15,7 @@ def test_find_grains(dummy_perovstats_object):
     find_grains(dummy_perovstats_object.config, dummy_perovstats_object.images[0], 0)
 
     assert dummy_perovstats_object.images[0].grains is not None
+    assert len(dummy_perovstats_object.images[0].grains) == 4
 
 
 values = [0, 1, 1, 2, 3, 4, 5]
@@ -37,8 +38,8 @@ def test_find_mode_grain_size():
     assert mode == expected_mode
 
 
-def test_tidy_borders(mask_random):
-    mask = mask_random
+def test_tidy_borders(dummy_mask: np.ndarray):
+    mask = dummy_mask
     new_mask = tidy_border(mask)
 
     assert new_mask.shape == mask.shape

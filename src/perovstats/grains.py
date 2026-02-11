@@ -5,8 +5,7 @@ from loguru import logger
 import numpy as np
 import numpy.typing as npt
 from skimage.color import label2rgb
-from skimage.measure import label
-from skimage.measure import regionprops
+from skimage.measure import label, regionprops
 from skimage import morphology
 
 from .classes import Grain
