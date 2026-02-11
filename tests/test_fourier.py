@@ -6,11 +6,8 @@ from perovstats.classes import PerovStats
 from perovstats.fourier import split_frequencies, create_masks, normalise_array, find_threshold
 from perovstats.segmentation import threshold_mad, threshold_mean_std
 
-def test_create_masks(dummy_perovstats_object: PerovStats, image_random):
+def test_create_masks(dummy_perovstats_object: PerovStats, dummy_original_image):
     image_data = dummy_perovstats_object.images[0]
-    image_data.image_original = image_random
-    image_data.high_pass = None
-    image_data.low_pass = None
 
     create_masks(dummy_perovstats_object.config, image_data)
 
@@ -86,7 +83,7 @@ def test_normalise_array(arr: np.array, expected: np.array):
 
     assert np.allclose(norm_arr, expected)
 
-@pytest.mark.xfail(reason="Waiting for images with findable grains")
+@pytest.mark.xfail(reason="Waiting for images with findable grains + other thresholding method")
 @pytest.mark.parametrize(
         (
             "filename",
@@ -118,7 +115,7 @@ def test_normalise_array(arr: np.array, expected: np.array):
             ),
             pytest.param(
                 "dummy_filename",
-                threshold_mad,
+                threshold_mean_std,
                 8,
                 ski.filters.gaussian,
                 10000,
@@ -134,7 +131,7 @@ def test_normalise_array(arr: np.array, expected: np.array):
 )
 def test_find_threshold(
     filename: str,
-    basic_grained_image: np.ndarray,
+    dummy_grain_mask: np.ndarray,
     threshold_func: callable,
     smooth_sigma: float,
     smooth_func: callable,
@@ -148,7 +145,7 @@ def test_find_threshold(
 ):
     threshold = find_threshold(
         filename,
-        basic_grained_image,
+        dummy_grain_mask,
         threshold_func,
         smooth_sigma,
         smooth_func,

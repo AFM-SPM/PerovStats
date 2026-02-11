@@ -6,55 +6,11 @@ from pathlib import Path
 import numpy as np
 import numpy.typing as npt
 import pytest
+import pickle
 
 from perovstats.classes import Grain, ImageData, PerovStats
 
 BASE_DIR = Path.cwd()
-
-@pytest.fixture
-def basic_grained_image() -> np.array:
-    """Basic image containing a findable grain
-
-    Returns
-    -------
-    np.array
-        Basic image with a grain that can be found
-    """
-    return np.array([
-        [1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 0, 0, 0, 1, 1],
-        [1, 1, 0, 1, 0, 1, 1],
-        [1, 1, 0, 0, 0, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1]
-    ])
-
-@pytest.fixture
-def image_random() -> npt.NDArray:
-    """Random image as NumPy array.
-
-    Returns
-    -------
-    npt.NDArray
-        Random 2 dimensional array
-
-    """
-    rng = np.random.default_rng(seed=1000)
-    return rng.random((16, 16))
-
-
-@pytest.fixture
-def mask_random(image_random: np.ndarray) -> npt.NDArray:
-    """Random mask as NumPy array.
-
-    Returns
-    -------
-    npt.NDArray
-        Random 2 dimensional boolean array
-
-    """
-    return image_random > 0.5
 
 
 @pytest.fixture
@@ -67,9 +23,45 @@ def default_config() -> dict:
 
 
 @pytest.fixture
-def dummy_grain() -> Grain:
+def dummy_grain_mask() -> np.ndarray:
+    with open('./tests/resources/single_grain_mask.pkl', 'rb') as file:
+        arr = pickle.load(file)
+    return arr
+
+
+@pytest.fixture
+def dummy_original_image() -> np.ndarray:
+    with open('./tests/resources/small_original.pkl', 'rb') as file:
+        arr = pickle.load(file)
+    return arr
+
+
+@pytest.fixture
+def dummy_high_pass() -> np.ndarray:
+    with open('./tests/resources/small_high_pass.pkl', 'rb') as file:
+        arr = pickle.load(file)
+    return arr
+
+
+@pytest.fixture
+def dummy_low_pass() -> np.ndarray:
+    with open('./tests/resources/small_low_pass.pkl', 'rb') as file:
+        arr = pickle.load(file)
+    return arr
+
+
+@pytest.fixture
+def dummy_mask() -> np.ndarray:
+    with open('./tests/resources/small_mask.pkl', 'rb') as file:
+        arr = pickle.load(file)
+    return arr
+
+
+@pytest.fixture
+def dummy_grain_object(dummy_grain_mask) -> Grain:
     grain = Grain(
         grain_id=0,
+        grain_mask=dummy_grain_mask,
         grain_area=10.2,
         grain_circularity_rating=0.6
     )
@@ -77,16 +69,16 @@ def dummy_grain() -> Grain:
 
 
 @pytest.fixture
-def dummy_image_data(mask_random, image_random, dummy_grain, tmp_path) -> ImageData:
+def dummy_image_data_object(dummy_mask, dummy_high_pass, dummy_low_pass, dummy_original_image, dummy_grain_object, tmp_path) -> ImageData:
     image_data = ImageData(
-        image_original=image_random,
-        mask=mask_random,
-        high_pass=image_random,
-        low_pass=image_random,
-        grains={0: dummy_grain},
-        file_directory="file/dir",
+        image_original=dummy_original_image,
+        mask=dummy_mask,
+        high_pass=dummy_high_pass,
+        low_pass=dummy_low_pass,
+        grains={0: dummy_grain_object},
+        file_directory=tmp_path,
         filename="dummy_filename",
-        mask_rgb=mask_random,
+        mask_rgb=dummy_mask,
         grains_per_nm2=2,
         mask_size_x_nm=10,
         mask_size_y_nm=10,
@@ -104,9 +96,9 @@ def dummy_image_data(mask_random, image_random, dummy_grain, tmp_path) -> ImageD
 
 
 @pytest.fixture
-def dummy_perovstats_object(dummy_image_data, default_config) -> PerovStats:
+def dummy_perovstats_object(dummy_image_data_object, default_config) -> PerovStats:
     perovstats_object = PerovStats(
-        images=[dummy_image_data],
+        images=[dummy_image_data_object],
         config=default_config
     )
     return perovstats_object
