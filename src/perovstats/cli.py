@@ -218,7 +218,7 @@ def main(args: list[str] | None = None) -> None:
         create_masks(perovstats_object.config, image_object)
 
         # Find grains from mask
-        find_grains(perovstats_object.config, image_object, image_num)
+        find_grains(perovstats_object.config, image_object)
 
         logger.info(f"[{image_object.filename}] : *** Exporting data ***")
 

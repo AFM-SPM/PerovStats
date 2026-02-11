@@ -8,10 +8,9 @@ from matplotlib import pyplot as plt
 import skimage as ski
 from skimage.measure import label
 
-from perovstats.grains import tidy_border, label2rgb, regionprops
+from .grains import tidy_border, regionprops
 from .freqsplit import frequency_split, find_cutoff
-from .segmentation import create_grain_mask
-from .segmentation import threshold_mad, threshold_mean_std
+from .segmentation import create_grain_mask, threshold_mad, threshold_mean_std
 
 
 def create_masks(config, image_object) -> None:
@@ -60,7 +59,6 @@ def create_masks(config, image_object) -> None:
             smooth_func=smooth_func,
             area_threshold=area_threshold,
             disk_radius=disk_radius,
-            pixel_to_nm_scaling=pixel_to_nm_scaling,
             min_threshold=min_threshold,
             max_threshold=max_threshold,
         )
@@ -198,7 +196,6 @@ def find_threshold(
     smooth_func,
     area_threshold,
     disk_radius,
-    pixel_to_nm_scaling,
     min_threshold,
     max_threshold,
 ):
@@ -254,14 +251,10 @@ def find_threshold(
 
         # Remove grains touching the edge
         labelled_mask = tidy_border(labelled_mask)
-
         mask_regionprops = regionprops(labelled_mask)
-        mask_areas = [
-            regionprop.area * pixel_to_nm_scaling**2 for regionprop in mask_regionprops
-        ]
 
-        if len(mask_areas) >= best_grain_num:
-            best_grain_num = len(mask_areas)
+        if len(mask_regionprops) >= best_grain_num:
+            best_grain_num = len(mask_regionprops)
             best_threshold = curr_threshold
 
     if best_grain_num == 0:
