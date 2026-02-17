@@ -65,6 +65,7 @@ def dummy_grain_object(dummy_grain_mask) -> Grain:
 def dummy_image_data_object(dummy_mask, dummy_high_pass, dummy_low_pass, dummy_original_image, dummy_grain_object, tmp_path) -> ImageData:
     image_data = ImageData(
         image_original=dummy_original_image,
+        image_flattened=None,
         mask=dummy_mask,
         high_pass=dummy_high_pass,
         low_pass=dummy_low_pass,

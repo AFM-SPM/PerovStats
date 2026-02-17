@@ -142,7 +142,16 @@ def get_arg(key: str, args: Namespace, config: dict, default: str | None = None)
 
 
 def setup_logger():
+    import pprint
+    logger.remove()
     logger.add("logs/PerovStats-{time:YYYY-MM-DD-HH-mm-ss}.log", level="DEBUG")
+    logger.add(sys.stdout,
+               level="DEBUG",
+               format="<blue>{time:HH:mm:ss}</blue> | <level>{level}</level> | <magenta>{file}</magenta> | {message}",
+               colorize=True)
+
+    pprint.pprint(logger._core.handlers)
+
 
 @logger.catch
 def main(args: list[str] | None = None) -> None:
@@ -203,7 +212,7 @@ def main(args: list[str] | None = None) -> None:
 
     logger.info(f"Loaded {len(perovstats_object.images)} images")
 
-    for image_num, image_object in enumerate(perovstats_object.images):
+    for image_object in perovstats_object.images:
         logger.info("----------------------------------------------------------")
         logger.info(f"processing {image_object.filename}")
         logger.info("----------------------------------------------------------")
