@@ -142,15 +142,16 @@ def get_arg(key: str, args: Namespace, config: dict, default: str | None = None)
 
 
 def setup_logger():
-    import pprint
+    """
+    Set up loguru, defining the output directory and filename and
+    define the syntax for log messages.
+    """
     logger.remove()
     logger.add("logs/PerovStats-{time:YYYY-MM-DD-HH-mm-ss}.log", level="DEBUG")
     logger.add(sys.stdout,
                level="DEBUG",
                format="<blue>{time:HH:mm:ss}</blue> | <level>{level}</level> | <magenta>{file}</magenta> | {message}",
                colorize=True)
-
-    pprint.pprint(logger._core.handlers)
 
 
 @logger.catch

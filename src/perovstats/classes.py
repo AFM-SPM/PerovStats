@@ -77,6 +77,7 @@ class ImageData:
     mask: np.ndarray | None = None
     high_pass: np.ndarray | None = None
     low_pass: np.ndarray | None = None
+    smears: np.ndarray | None = None
     grains: dict[int, Grain] | None = None
     file_directory: str | None = None
     filename: str | None = None
