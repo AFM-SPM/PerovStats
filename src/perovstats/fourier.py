@@ -10,7 +10,7 @@ import skimage as ski
 from .grains import find_threshold
 from .freqsplit import frequency_split, find_cutoff
 from .segmentation import create_grain_mask, threshold_mad, threshold_mean_std
-from .smears import create_smear_mask
+from .smears import find_smear_areas
 from .utils import normalise_array
 
 
@@ -25,8 +25,19 @@ def create_masks(config, image_object) -> None:
         im = image_object.high_pass
         pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
 
+        gradient_map = get_gradients(image_object.high_pass, threshold=10)
+
         # Remove/ ignore smears in high_pass image
-        image_object.smears = create_smear_mask(image_object.high_pass)
+        smear_config = config["smears"]
+        image_object.smears = find_smear_areas(image_object.high_pass, image_object.low_pass, smear_config, fname)
+
+        rgb_highpass = np.stack((image_object.high_pass,)*3, axis=-1)
+        rgb_highpass = normalise_array(rgb_highpass)
+        rgb_highpass[image_object.smears > 0] = [1, 0, 0]
+        _, axs = plt.subplots(1, 2, figsize=(12, 6))
+        axs[0].imshow(image_object.high_pass, cmap="grey")
+        axs[1].imshow(rgb_highpass)
+        # plt.show()
 
         # Thresholding config options
         threshold_func = config["mask"]["threshold_function"]
@@ -182,3 +193,35 @@ def split_frequencies(config, image_object) -> list[np.real]:
     arr = normalise_array(arr)
     img = Image.fromarray(arr * 255).convert("L")
     img.save(file_output_dir / "images" / f"{filename}_original.jpg")
+
+
+def get_gradients(image, threshold):
+    from scipy.ndimage import binary_closing, binary_opening
+
+    # horizontal_gradients = np.zeros_like(image, dtype=float)
+    # horizontal_gradients[:, 1:-1] = (
+    #   image[:, 2:] - image[:, :-2]
+    # ) / 2
+
+    # big_gradients = horizontal_gradients > threshold
+
+    # # Connect fragmented regions
+    # connection_distance = 10
+    # structure = np.ones((connection_distance,connection_distance), dtype=bool)
+    # big_gradients = binary_closing(big_gradients, structure=structure)
+
+    # return big_gradients
+
+    vertical_gradients = np.zeros_like(image, dtype=float)
+    vertical_gradients[1:-1, :] = (
+        image[2:, :] - image[:-2, :]
+    ) / 2
+
+    gradient_changes = np.zeros_like(image, dtype=float)
+    gradient_changes[1:-1, :] = (
+        vertical_gradients[2:, :] - vertical_gradients[:-2, :]
+    ) / 2
+
+    big_gradients = abs(gradient_changes) > threshold
+
+    return big_gradients

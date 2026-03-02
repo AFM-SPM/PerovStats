@@ -150,7 +150,7 @@ def setup_logger():
     logger.add("logs/PerovStats-{time:YYYY-MM-DD-HH-mm-ss}.log", level="DEBUG")
     logger.add(sys.stdout,
                level="DEBUG",
-               format="<blue>{time:HH:mm:ss}</blue> | <level>{level}</level> | <magenta>{file}</magenta> | {message}",
+               format="<blue>{time:HH:mm:ss}</blue> | <level>{level: <8}</level> | <magenta>{file: <12}</magenta> | {message}",
                colorize=True)
 
 
@@ -217,8 +217,8 @@ def main(args: list[str] | None = None) -> None:
         logger.info("----------------------------------------------------------")
         logger.info(f"processing {image_object.filename}")
         logger.info("----------------------------------------------------------")
-        logger.debug(f"[{filename}] : Image dimensions: {image_object.image_original.shape}")
-        logger.debug(f"[{filename}] : pixel_to_nm_scaling: {image_object.pixel_to_nm_scaling}")
+        logger.debug(f"[{image_object.filename}] : Image dimensions: {image_object.image_original.shape}")
+        logger.debug(f"[{image_object.filename}] : pixel_to_nm_scaling: {image_object.pixel_to_nm_scaling}")
 
         # Filter images
         run_filters(perovstats_object.config, image_object)
@@ -249,7 +249,7 @@ def main(args: list[str] | None = None) -> None:
         save_config(perovstats_object.config, output_filename)
 
         logger.info(
-            f"[{filename}] : Exported data and config to {Path(output_dir) / Path(image_object.filename)}",
+            f"[{image_object.filename}] : Exported data and config to {Path(output_dir) / Path(image_object.filename)}",
         )
 
     logger.success("Process complete.")

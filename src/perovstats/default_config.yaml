@@ -40,3 +40,10 @@ mask:
   cleaning:
     area_threshold: 10000 # in nm2.
     disk_radius_factor: 40
+smears:
+  threshold: 0.1 # Minimum difference between vertical neighbours to trigger a possible smear start.
+  min_smear_length: 15 # Minimum length of a smear row.
+  difference_sensitivity: 0.03 # Maximum difference between x and x+1's difference to their vertical neighbours.
+  min_neighbours: 2 # Minimum number of vertical neighbours found to keep the mask pixel.
+  min_smear_area: 100 # Minimum area of a smear.
+  connection_distance: 7 # Maximum two smears can be to still connect into one

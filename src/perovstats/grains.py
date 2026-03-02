@@ -111,7 +111,7 @@ def find_grains(config, image_object) -> None:
         f"[{filename}] : Obtained {image_object.num_grains} grains",
     )
 
-    create_plots(Path(config_yaml["output_dir"]) / filename / "images", filename, mask_data, nm_to_micron=NM_TO_MICRON)
+    create_plots(Path(config_yaml["output_dir"]) / filename / "images", filename, mask_data, nm_to_micron=NM_TO_MICRON, image_object=image_object)
 
 
 def find_median_grain_size(values):

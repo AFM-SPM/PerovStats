@@ -4,15 +4,20 @@ import matplotlib.pyplot as plt
 import numpy.typing as npt
 from pathlib import Path
 
+import numpy as np
+
+from .utils import normalise_array
+
 
 def create_plots(
         output_dir: str,
         filename: str,
         mask_data: dict[str, dict[str, npt.NDArray | float]],
         nm_to_micron: float,
+        image_object,
 ):
     """Show plots for grain area distribution and the rgb image of identified grains"""
-    plot_coloured_grains(filename, nm_to_micron, mask_data, output_dir)
+    plot_coloured_grains(filename, nm_to_micron, mask_data, output_dir, image_object)
 
 
 def plot_coloured_grains(
@@ -20,6 +25,7 @@ def plot_coloured_grains(
         nm_to_micron: float,
         mask_data: dict[str, dict[str, npt.NDArray | float]],
         output_dir: str,
+        image_object,
 ) -> None:
     """
     Plot coloured grains.
@@ -50,3 +56,11 @@ def plot_coloured_grains(
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
     plt.imsave(Path(output_dir) / plot_name, mask_rgb)
+
+    rgb_highpass = np.stack((image_object.high_pass,)*3, axis=-1)
+    rgb_highpass = normalise_array(rgb_highpass)
+    mask_2d = np.all(mask_rgb == 0, axis=2)
+    rgb_highpass[mask_2d == 0] = [1, 1, 1]
+    rgb_highpass[image_object.smears == 1] = [1, 0, 0]
+    plt.imshow(rgb_highpass)
+    plt.show()
