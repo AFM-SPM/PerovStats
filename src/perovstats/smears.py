@@ -7,8 +7,8 @@ from scipy import ndimage as ndi
 def find_smear_areas(
         high_pass: np.ndarray,
         low_pass: np.ndarray,
-        config,
-        filename,
+        config: dict[str, any],
+        filename: str,
     ):
     threshold = config["smear_threshold"]
     smooth_sigma= config["smooth_sigma"]
@@ -48,7 +48,10 @@ def find_smear_areas(
     return final_mask, imshows
 
 
-def get_horizontal_gradients(image, threshold):
+def get_horizontal_gradients(
+        image: np.ndarray,
+        threshold: float
+    ) -> np.ndarray:
     grad_x = ndi.sobel(image, axis=1)
     mask = grad_x > threshold
 

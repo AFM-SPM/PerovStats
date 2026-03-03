@@ -1,6 +1,6 @@
 import numpy as np
 
-def normalise_array(arr):
+def normalise_array(arr: np.ndarray) -> np.ndarray:
     v_min, v_max = np.percentile(arr, [0.05, 99.95])
 
     clipped = np.clip(arr, v_min, v_max)

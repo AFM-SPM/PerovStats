@@ -32,7 +32,7 @@ def save_config(config: dict, output_filename: str) -> None:
         safe_dump(config, outfile, default_flow_style=False)
 
 
-def find_circularity_rating(grain_area, grain_perimeter) -> float:
+def find_circularity_rating(grain_area: float, grain_perimeter: float) -> float:
     """
     Take a grain mask and use the isoperimetric ratio to give it a rating (0 - 1)
     for how circular it is.

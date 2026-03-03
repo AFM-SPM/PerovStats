@@ -1,10 +1,14 @@
 import copy
 
 from loguru import logger
-
 from topostats.filters import Filters
 
-def run_filters(config, image_object):
+from .classes import ImageData
+
+def run_filters(
+    config: dict[str, any],
+    image_object: ImageData
+):
     filter_config = config["filter"]
     if filter_config["run"]:
         filename = image_object.filename

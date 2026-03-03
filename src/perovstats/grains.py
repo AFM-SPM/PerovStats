@@ -8,13 +8,17 @@ from skimage import morphology
 from skimage.color import label2rgb
 from skimage.measure import label, regionprops
 
-from .classes import Grain
+from .classes import Grain, ImageData
 from .visualisation import create_plots
 from .statistics import find_circularity_rating
 from .segmentation import create_grain_mask
 
 
-def find_grains(config, image_object, imshows) -> None:
+def find_grains(
+        config: dict[str, any],
+        image_object: ImageData,
+        imshows: list[np.ndarray] # TEMP
+    ) -> None:
     """
     Method to find grains from a mask and list the stats about them.
 
@@ -106,7 +110,7 @@ def find_grains(config, image_object, imshows) -> None:
     create_plots(Path(config_yaml["output_dir"]) / filename / "images", filename, mask_data, image_object=image_object, imshows=imshows)
 
 
-def find_median_grain_size(values):
+def find_median_grain_size(values: list[float]) -> float:
     values = sorted(values)
     count = len(values)
     mid = count // 2
@@ -117,11 +121,11 @@ def find_median_grain_size(values):
         return (values[mid - 1] + values[mid]) / 2
 
 
-def find_mean_grain_size(values):
+def find_mean_grain_size(values: list[float]) -> float:
     return sum(values) / len(values)
 
 
-def find_mode_grain_size(values):
+def find_mode_grain_size(values: list[float]) -> float:
     counts = {}
     for v in values:
         counts[v] = counts.get(v, 0) + 1
@@ -174,12 +178,12 @@ def find_threshold(
     image: np.ndarray,
     threshold_func: callable,
     smooth_sigma: float,
-    smooth_func,
-    area_threshold,
-    disk_radius,
-    min_threshold,
-    max_threshold,
-):
+    smooth_func: callable,
+    area_threshold: float,
+    disk_radius: int,
+    min_threshold: float,
+    max_threshold: float,
+) -> float:
     """
     Loop through possible threshold values and select the value
     that produces the most grains.
