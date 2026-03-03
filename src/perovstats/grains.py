@@ -4,9 +4,9 @@ from pathlib import Path
 from loguru import logger
 import numpy as np
 import numpy.typing as npt
+from skimage import morphology
 from skimage.color import label2rgb
 from skimage.measure import label, regionprops
-from skimage import morphology
 
 from .classes import Grain
 from .visualisation import create_plots

@@ -17,6 +17,8 @@ def find_smear_areas(
 
     logger.info(f"[{filename}] : *** Finding smear areas ***")
 
+    # Compare the horizontal and vertical gradient of the high pass, marking pixels(/ areas) that have a
+    # value over a given threshold
     smooth = ndi.gaussian_filter(high_pass, sigma=smooth_sigma)
     grad_x = np.abs(ndi.sobel(smooth, axis=1))
     grad_y = np.abs(ndi.sobel(smooth, axis=0))
@@ -32,6 +34,8 @@ def find_smear_areas(
 
     mask = binary_closing(mask, structure=np.ones((5, 10)))
 
+    # Compare the mask calculated above with a mask selecting all pixels with a horizontal gradient over
+    # a given threshold, creating a new mask containing all overlapping pixels
     low_pass_gradient_mask = get_low_pass_gradients(low_pass, threshold=lowpass_threshold)
     final_mask = mask & low_pass_gradient_mask
     final_mask = binary_dilation(final_mask, structure=np.ones((3, 3)))

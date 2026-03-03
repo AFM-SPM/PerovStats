@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
+import numpy as np
 import numpy.typing as npt
 from pathlib import Path
-
-import numpy as np
 
 from .utils import normalise_array
 
