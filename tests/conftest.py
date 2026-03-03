@@ -69,6 +69,7 @@ def dummy_image_data_object(dummy_mask, dummy_high_pass, dummy_low_pass, dummy_o
         mask=dummy_mask,
         high_pass=dummy_high_pass,
         low_pass=dummy_low_pass,
+        smears=np.zeros_like(dummy_mask, dtype=bool),
         grains={0: dummy_grain_object},
         file_directory=tmp_path,
         filename="dummy_filename",
