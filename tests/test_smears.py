@@ -1,7 +1,7 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 from perovstats.smears import find_smear_areas, get_horizontal_gradients
+
 
 def test_find_smear_areas(
     dummy_high_pass,
