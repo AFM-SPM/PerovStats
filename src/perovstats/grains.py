@@ -14,15 +14,6 @@ from .statistics import find_circularity_rating
 from .segmentation import create_grain_mask
 
 
-# Data directory
-DATA_DIR = Path("./output")
-
-NM_TO_MICRON = 1e-3
-
-config_yaml_files = list(DATA_DIR.glob("*/**/*_config.yaml"))
-logger.info(f"found {len(config_yaml_files)} config files")
-
-
 def find_grains(config, image_object, imshows) -> None:
     """
     Method to find grains from a mask and list the stats about them.
