@@ -1,60 +1,58 @@
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
+import numpy as np
 import numpy.typing as npt
 from pathlib import Path
+
+from .utils import normalise_array
 
 
 def create_plots(
         output_dir: str,
         filename: str,
         mask_data: dict[str, dict[str, npt.NDArray | float]],
-        nm_to_micron: float,
+        image_object,
+        imshows,
 ):
     """Show plots for grain area distribution and the rgb image of identified grains"""
-    _, axes = plt.subplots(1, 2, figsize=(12, 5))
-    plot_coloured_grains(filename, nm_to_micron, mask_data, ax=axes[1])
-    plt.tight_layout()
+    mask_rgb = mask_data["mask_rgb"]
     plot_name = filename + "_coloured_grains.jpg"
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
-    plt.savefig(Path(output_dir) / plot_name, dpi=300, bbox_inches="tight")
-    plt.close()
+    plt.imsave(Path(output_dir) / plot_name, mask_rgb)
 
+    if imshows is not None:
+        rgb_highpass = np.stack((image_object.high_pass,)*3, axis=-1)
+        rgb_highpass = normalise_array(rgb_highpass)
+        mask_2d = np.all(mask_rgb == 0, axis=2)
+        rgb_highpass[mask_2d == 0] = [1, 1, 1]
+        rgb_highpass[image_object.smears == 1] = [1, 0, 0]
 
-def plot_coloured_grains(
-        filename: str,
-        nm_to_micron: float,
-        mask_data: dict[str, dict[str, npt.NDArray | float]],
-        ax: int = None,
-) -> None:
-    """
-    Plot coloured grains.
+        high_pass = image_object.high_pass
+        mask_overlay = np.stack((high_pass,)*3, axis=-1)
+        mask_overlay = normalise_array(mask_overlay)
+        mask_overlay[image_object.mask > 0] = [1, 0, 0]
 
-    Parameters
-    ----------
-    filename : str
-        Name of the original .spm file
-    nm_to_micron : float
-        Scale factor of nm to microns.
-    mask_data : dict[str, dict[str, npt.NDArray | float]]
-        Dictionary containing an array of the mask to be coloured.
-    ax : int
-        The axis containing the coloured plot for the figure. (Improve this one).
-    """
-    if ax is None:
-        ax = plt.gca()
-    mask_rgb = mask_data["mask_rgb"]
-    num_grains = mask_data["num_grains"]
-    grains_per_nm2 = mask_data["grains_per_nm2"]
-    grains_per_um2 = grains_per_nm2 / nm_to_micron**2
-    mask_size_x_um = mask_data["mask_size_x_nm"] * nm_to_micron
-    mask_size_y_um = mask_data["mask_size_y_nm"] * nm_to_micron
-    title = (
-        f"{filename}\n"
-        f"image size: {mask_size_x_um} x {mask_size_y_um} µm² | "
-        f"grains: {num_grains} | grains/µm²: {grains_per_um2:.2f}"
-    )
-    ax.imshow(mask_rgb)
-    ax.set_title(title)
-    ax.axis("off")
+        # ~~~~ TEMP FOR VISUALISATION DURING DEBUGGING ~~~~~~~~~~~~~~~~~~~~~
+        _, axes = plt.subplots(2, 3, figsize=(12, 8))
+
+        axes[0, 0].imshow(imshows[0], cmap="grey")
+        axes[0, 0].set_title("Original high pass")
+        axes[1, 0].imshow(imshows[1], cmap="grey")
+        axes[1, 0].set_title("Combined masks")
+        axes[0, 1].imshow(imshows[2], cmap="grey")
+        axes[0, 1].set_title("High pass gradient comparison")
+        axes[1, 1].imshow(imshows[3], cmap="grey")
+        axes[1, 1].set_title("Low pass horizontal gradient")
+        axes[0, 2].imshow(mask_overlay, cmap="grey")
+        axes[0, 2].set_title("Grain edges")
+        axes[1, 2].imshow(rgb_highpass, cmap="grey")
+        axes[1, 2].set_title("Grains with smears removed")
+
+        for ax in axes.ravel():
+            ax.axis("off")
+
+        plt.tight_layout()
+        plt.show()
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

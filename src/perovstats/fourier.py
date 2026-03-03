@@ -6,14 +6,19 @@ import numpy as np
 from PIL import Image
 from matplotlib import pyplot as plt
 import skimage as ski
-from skimage.measure import label
 
-from .grains import tidy_border, regionprops
+from .grains import find_threshold
 from .freqsplit import frequency_split, find_cutoff
 from .segmentation import create_grain_mask, threshold_mad, threshold_mean_std
+from .smears import find_smear_areas
+from .utils import normalise_array
+from .classes import ImageData
 
 
-def create_masks(config, image_object) -> None:
+def create_masks(
+    config: dict[str, any],
+    image_object: ImageData
+) -> None:
     split_frequencies(config, image_object)
 
     output_dir = Path(config["output_dir"])
@@ -23,6 +28,17 @@ def create_masks(config, image_object) -> None:
         fname = image_object.filename
         im = image_object.high_pass
         pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
+
+        # Remove/ ignore smears in high_pass image
+        smear_config = config["remove_smears"]
+        if smear_config["run"]:
+            image_object.smears, imshows = find_smear_areas(image_object.high_pass, image_object.low_pass, smear_config, fname)
+
+            rgb_highpass = np.stack((image_object.high_pass,)*3, axis=-1)
+            rgb_highpass = normalise_array(rgb_highpass)
+            rgb_highpass[image_object.smears > 0] = [1, 0, 0]
+        else:
+            imshows = None
 
         # Thresholding config options
         threshold_func = config["mask"]["threshold_function"]
@@ -90,8 +106,13 @@ def create_masks(config, image_object) -> None:
         rgb_highpass[np_mask > 0] = [1, 0, 0]
         plt.imsave(output_dir / fname / "images" / f"{fname}_mask_overlay.jpg", rgb_highpass)
 
+    return imshows
 
-def split_frequencies(config, image_object) -> list[np.real]:
+
+def split_frequencies(
+    config: dict[str, any],
+    image_object: ImageData
+) -> None:
     """
     Carry out frequency splitting on a batch of files.
 
@@ -178,90 +199,3 @@ def split_frequencies(config, image_object) -> list[np.real]:
     arr = normalise_array(arr)
     img = Image.fromarray(arr * 255).convert("L")
     img.save(file_output_dir / "images" / f"{filename}_original.jpg")
-
-
-def normalise_array(arr):
-    v_min, v_max = np.percentile(arr, [0.05, 99.95])
-
-    clipped = np.clip(arr, v_min, v_max)
-    normalised = (clipped - v_min) / (v_max - v_min)
-    return normalised
-
-
-def find_threshold(
-    filename: str,
-    image: np.ndarray,
-    threshold_func: callable,
-    smooth_sigma: float,
-    smooth_func,
-    area_threshold,
-    disk_radius,
-    min_threshold,
-    max_threshold,
-):
-    """
-    Loop through possible threshold values and select the value
-    that produces the most grains.
-
-    Parameters
-    ----------
-    filename: str
-        Name of the image being processed.
-    image : np.ndarray
-        Numpy array of the high-passed image to use.
-    threshold_func : Callable
-        Threshold function.
-    smooth_sigma : Callable, optional
-        Smoothing function.
-    smooth_func : dict, optional
-        Arguments to be passed to the smoothing function.
-    area_threshold : float
-        The area threshold.
-    disk_radius : float
-        The disk radius.
-    pixel_to_nm_scaling : float
-        The scale factor of pixels:nm.
-
-    Returns
-    -------
-    float
-        The selected best threshold.
-    """
-    logger.info(f"[{filename}] : Finding threshold")
-
-    best_threshold = None
-    best_grain_num = 0
-    threshold_step = (max_threshold - min_threshold) / 50
-    for curr_threshold in np.arange(min_threshold, max_threshold, threshold_step):
-        curr_threshold = round(curr_threshold, 3)
-        np_mask = create_grain_mask(
-            image,
-            threshold_func=threshold_func,
-            threshold=curr_threshold,
-            smooth_sigma=smooth_sigma,
-            smooth_func=smooth_func,
-            area_threshold=area_threshold,
-            disk_radius=disk_radius,
-        )
-
-        mask = np_mask.astype(bool)
-        mask = np.invert(mask)
-
-        labelled_mask = label(mask, connectivity=1)
-
-        # Remove grains touching the edge
-        labelled_mask = tidy_border(labelled_mask)
-        mask_regionprops = regionprops(labelled_mask)
-
-        if len(mask_regionprops) >= best_grain_num:
-            best_grain_num = len(mask_regionprops)
-            best_threshold = curr_threshold
-
-    if best_grain_num == 0:
-        logger.warning(f"[{filename}] : No grains could be found for any tested threshold.",
-                       "consider increasing the threshold bounds in the config.",
-                       "Skipping image..")
-        return None
-
-    logger.info(f"[{filename}] : Best threshold found: {best_threshold}")
-    return best_threshold

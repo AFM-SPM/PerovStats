@@ -36,7 +36,13 @@ mask:
   threshold_bounds: [0, 4] # Minimum and maximum thresholds for masking.
   smoothing:
     smooth_function: gaussian # Options: gaussian, difference_of_gaussians.
-    sigma: 8
+    sigma: 6
   cleaning:
     area_threshold: 10000 # in nm2.
     disk_radius_factor: 40
+remove_smears:
+    run: True
+    smooth_sigma: 1 # How much to smooth the high pass image before comparing gradients
+    smear_threshold: 2 # Minimum value for y gradient / x gradient in the high pass image, meaning possible smear
+    min_smear_area: 200 # in px^2, areas under this value are removed and ignored
+    lowpass_threshold: 100 # Minimum horizontal gradient in the low pass image to be marked

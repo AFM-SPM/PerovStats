@@ -162,7 +162,7 @@ def find_cutoff(
         max_cutoff: float,
         cutoff_step: float,
         min_rms: float,
-    ):
+    ) -> float:
     """Iterate through possible cutoff points to find one with the smallest RMS over a given value."""
     image = image_object.image_original
     best_cutoff = None
@@ -188,6 +188,6 @@ def find_cutoff(
     return best_cutoff
 
 
-def calculate_rms(image):
+def calculate_rms(image) -> float:
     """Find the RMS of an array."""
     return np.sqrt(np.mean(image**2))

@@ -49,6 +49,16 @@ def dummy_low_pass() -> np.ndarray:
     arr = np.load("./tests/resources/small_low_pass.npy")
     return arr
 
+@pytest.fixture
+def dummy_low_pass_h_gradient() -> np.ndarray:
+    arr = np.load("./tests/resources/small_low_pass_h_gradient.npy")
+    return arr
+
+@pytest.fixture
+def dummy_smear_mask() -> np.ndarray:
+    arr = np.load("./tests/resources/small_smear_mask.npy")
+    return arr
+
 
 @pytest.fixture
 def dummy_grain_object(dummy_grain_mask) -> Grain:
@@ -69,6 +79,7 @@ def dummy_image_data_object(dummy_mask, dummy_high_pass, dummy_low_pass, dummy_o
         mask=dummy_mask,
         high_pass=dummy_high_pass,
         low_pass=dummy_low_pass,
+        smears=np.zeros_like(dummy_mask, dtype=bool),
         grains={0: dummy_grain_object},
         file_directory=tmp_path,
         filename="dummy_filename",

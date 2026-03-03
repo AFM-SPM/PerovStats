@@ -142,15 +142,16 @@ def get_arg(key: str, args: Namespace, config: dict, default: str | None = None)
 
 
 def setup_logger():
-    import pprint
+    """
+    Set up loguru, defining the output directory and filename and
+    define the syntax for log messages.
+    """
     logger.remove()
     logger.add("logs/PerovStats-{time:YYYY-MM-DD-HH-mm-ss}.log", level="DEBUG")
     logger.add(sys.stdout,
                level="DEBUG",
-               format="<blue>{time:HH:mm:ss}</blue> | <level>{level}</level> | <magenta>{file}</magenta> | {message}",
+               format="<blue>{time:HH:mm:ss}</blue> | <level>{level: <8}</level> | <magenta>{file: <12}</magenta> | {message}",
                colorize=True)
-
-    pprint.pprint(logger._core.handlers)
 
 
     
@@ -199,7 +200,10 @@ def main(args: list[str] | None = None) -> None:
 
     # Load scans
     loadscans = LoadScans(img_files, **load_config)
-    loadscans.get_data()
+    try:
+        loadscans.get_data()
+    except ValueError as e:
+        logger.warning(f"Channel {load_config['channel']} not found in file. Please ensure the config option is correct and all files contain the required channel.")
     image_dicts = loadscans.img_dict
 
     perovstats_object = PerovStats(config=config, images=[])
@@ -217,17 +221,17 @@ def main(args: list[str] | None = None) -> None:
         logger.info("----------------------------------------------------------")
         logger.info(f"processing {image_object.filename}")
         logger.info("----------------------------------------------------------")
-        logger.debug(f"[{filename}] : Image dimensions: {image_object.image_original.shape}")
-        logger.debug(f"[{filename}] : pixel_to_nm_scaling: {image_object.pixel_to_nm_scaling}")
+        logger.debug(f"[{image_object.filename}] : Image dimensions: {image_object.image_original.shape}")
+        logger.debug(f"[{image_object.filename}] : pixel_to_nm_scaling: {image_object.pixel_to_nm_scaling}")
 
         # Filter images
         run_filters(perovstats_object.config, image_object)
 
         # Apply fourier analysis and create binary mask of resultant high-pass image
-        create_masks(perovstats_object.config, image_object)
+        imshows = create_masks(perovstats_object.config, image_object)
 
         # Find grains from mask
-        find_grains(perovstats_object.config, image_object)
+        find_grains(perovstats_object.config, image_object, imshows=imshows)
 
         logger.info(f"[{image_object.filename}] : *** Exporting data ***")
 
@@ -249,7 +253,7 @@ def main(args: list[str] | None = None) -> None:
         save_config(perovstats_object.config, output_filename)
 
         logger.info(
-            f"[{filename}] : Exported data and config to {Path(output_dir) / Path(image_object.filename)}",
+            f"[{image_object.filename}] : Exported data and config to {Path(output_dir) / Path(image_object.filename)}",
         )
 
     logger.success("Process complete.")

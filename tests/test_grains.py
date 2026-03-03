@@ -9,7 +9,7 @@ from perovstats.grains import (
 )
 
 def test_find_grains(dummy_perovstats_object):
-    find_grains(dummy_perovstats_object.config, dummy_perovstats_object.images[0])
+    find_grains(dummy_perovstats_object.config, dummy_perovstats_object.images[0], imshows=None)
 
     assert dummy_perovstats_object.images[0].grains is not None
     assert len(dummy_perovstats_object.images[0].grains) == 4
