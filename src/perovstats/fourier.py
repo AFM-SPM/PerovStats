@@ -28,12 +28,15 @@ def create_masks(config, image_object) -> None:
         gradient_map = get_gradients(image_object.high_pass, threshold=10)
 
         # Remove/ ignore smears in high_pass image
-        smear_config = config["smears"]
-        image_object.smears, imshows = find_smear_areas(image_object.high_pass, image_object.low_pass, smear_config, fname)
+        smear_config = config["remove_smears"]
+        if smear_config["run"]:
+            image_object.smears, imshows = find_smear_areas(image_object.high_pass, image_object.low_pass, smear_config, fname)
 
-        rgb_highpass = np.stack((image_object.high_pass,)*3, axis=-1)
-        rgb_highpass = normalise_array(rgb_highpass)
-        rgb_highpass[image_object.smears > 0] = [1, 0, 0]
+            rgb_highpass = np.stack((image_object.high_pass,)*3, axis=-1)
+            rgb_highpass = normalise_array(rgb_highpass)
+            rgb_highpass[image_object.smears > 0] = [1, 0, 0]
+        else:
+            imshows = None
 
         # Thresholding config options
         threshold_func = config["mask"]["threshold_function"]

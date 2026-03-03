@@ -53,7 +53,8 @@ def find_grains(config, image_object, imshows) -> None:
     labelled_mask = tidy_border(labelled_mask)
 
     # Remove grains in/ touching smears
-    labelled_mask = clean_smears(labelled_mask, image_object.smears)
+    if config["remove_smears"]["run"]:
+        labelled_mask = clean_smears(labelled_mask, image_object.smears)
 
     labelled_mask_rgb = label2rgb(labelled_mask, bg_label=0, saturation=0)
 
@@ -111,7 +112,7 @@ def find_grains(config, image_object, imshows) -> None:
         f"[{filename}] : Obtained {image_object.num_grains} grains",
     )
 
-    create_plots(Path(config_yaml["output_dir"]) / filename / "images", filename, mask_data, nm_to_micron=NM_TO_MICRON, image_object=image_object, imshows=imshows)
+    create_plots(Path(config_yaml["output_dir"]) / filename / "images", filename, mask_data, image_object=image_object, imshows=imshows)
 
 
 def find_median_grain_size(values):
