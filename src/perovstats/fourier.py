@@ -114,7 +114,7 @@ def split_frequencies(
     image_object: ImageData
 ) -> None:
     """
-    Carry out frequency splitting on a batch of files.
+    Carry out frequency splitting on an image.
 
     Parameters
     ----------

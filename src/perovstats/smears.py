@@ -10,6 +10,23 @@ def find_smear_areas(
         config: dict[str, any],
         filename: str,
     ):
+    """
+    Take a high-passed array and for each pixel compare its gradient difference on each axis
+    with the horizontal axis' gradient for the low-passed image's corresponding pixel, pixels
+    over given thresholds for both masks are marked as smear areas.
+
+    Parameters
+    ----------
+    high_pass: np.ndarray
+        The high-passed version of the image for use in finding vertical gradients significantly
+        bigger than the corresponding horizontal gradient.
+    low_pass: np.ndarray
+        The low-passed version of the image for use in finding high horizontal gradients.
+    config: dict[str, any]
+        Smear removal configuration options
+    filename: str
+        Filename currently being processed, used for logging info.
+    """
     threshold = config["smear_threshold"]
     smooth_sigma= config["smooth_sigma"]
     min_size = config["min_smear_area"]
@@ -52,6 +69,10 @@ def get_horizontal_gradients(
         image: np.ndarray,
         threshold: float
     ) -> np.ndarray:
+    """
+    Use the sobel formula to assign a gradient to each pixel in an array
+    for the horizontal axis.
+    """
     grad_x = ndi.sobel(image, axis=1)
     mask = grad_x > threshold
 
