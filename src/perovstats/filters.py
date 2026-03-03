@@ -9,6 +9,7 @@ def run_filters(
     config: dict[str, any],
     image_object: ImageData
 ):
+    """Run the TopoStats Filters module."""
     filter_config = config["filter"]
     if filter_config["run"]:
         filename = image_object.filename

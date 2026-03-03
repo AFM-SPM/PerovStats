@@ -163,6 +163,23 @@ def tidy_border(mask: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
 
 
 def clean_smears(mask: np.ndarray, smear_mask: np.ndarray) -> np.ndarray:
+    """
+    Compare the found grain segments with the previously computed smear mask
+    and remove grains that overlap with any part of the mask.
+
+    Parameters
+    ----------
+    mask : np.ndarray
+        The grain mask.
+    smear_mask : np.ndarray
+        The smear mask.
+
+    Returns
+    -------
+    np.ndarray
+        The resultant grain mask with sections overlapping with the smear mask removed.
+
+    """
     mask_labelled = morphology.label(mask)
     mask_regionprops = regionprops(mask_labelled)
     for region in mask_regionprops:
