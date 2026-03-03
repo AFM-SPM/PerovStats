@@ -49,6 +49,16 @@ def dummy_low_pass() -> np.ndarray:
     arr = np.load("./tests/resources/small_low_pass.npy")
     return arr
 
+@pytest.fixture
+def dummy_low_pass_h_gradient() -> np.ndarray:
+    arr = np.load("./tests/resources/small_low_pass_h_gradient.npy")
+    return arr
+
+@pytest.fixture
+def dummy_smear_mask() -> np.ndarray:
+    arr = np.load("./tests/resources/small_smear_mask.npy")
+    return arr
+
 
 @pytest.fixture
 def dummy_grain_object(dummy_grain_mask) -> Grain:

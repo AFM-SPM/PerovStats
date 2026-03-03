@@ -36,7 +36,7 @@ def find_smear_areas(
 
     # Compare the mask calculated above with a mask selecting all pixels with a horizontal gradient over
     # a given threshold, creating a new mask containing all overlapping pixels
-    low_pass_gradient_mask = get_low_pass_gradients(low_pass, threshold=lowpass_threshold)
+    low_pass_gradient_mask = get_horizontal_gradients(low_pass, threshold=lowpass_threshold)
     final_mask = mask & low_pass_gradient_mask
     final_mask = binary_dilation(final_mask, structure=np.ones((3, 3)))
 
@@ -48,7 +48,7 @@ def find_smear_areas(
     return final_mask, imshows
 
 
-def get_low_pass_gradients(image, threshold):
+def get_horizontal_gradients(image, threshold):
     grad_x = ndi.sobel(image, axis=1)
     mask = grad_x > threshold
 
