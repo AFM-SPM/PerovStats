@@ -31,23 +31,28 @@ def create_plots(
     rgb_highpass[mask_2d == 0] = [1, 1, 1]
     rgb_highpass[image_object.smears == 1] = [1, 0, 0]
 
+    high_pass = image_object.high_pass
+    mask_overlay = np.stack((high_pass,)*3, axis=-1)
+    mask_overlay = normalise_array(mask_overlay)
+    mask_overlay[image_object.mask > 0] = [1, 0, 0]
+
     # ~~~~ TEMP FOR VISUALISATION DURING DEBUGGING ~~~~~~~~~~~~~~~~~~~~~
-    fig = plt.figure(figsize=(12, 6))
-    gs = gridspec.GridSpec(2, 3)
+    _, axes = plt.subplots(2, 3, figsize=(12, 8))
 
-    ax1 = fig.add_subplot(gs[0, 0])
-    ax2 = fig.add_subplot(gs[0, 1])
-    ax3 = fig.add_subplot(gs[1, 0])
-    ax4 = fig.add_subplot(gs[1, 1])
-    ax5 = fig.add_subplot(gs[:, 2])
+    axes[0, 0].imshow(imshows[0], cmap="grey")
+    axes[0, 0].set_title("Original high pass")
+    axes[1, 0].imshow(imshows[1], cmap="grey")
+    axes[1, 0].set_title("Combined masks")
+    axes[0, 1].imshow(imshows[2], cmap="grey")
+    axes[0, 1].set_title("High pass gradient comparison")
+    axes[1, 1].imshow(imshows[3], cmap="grey")
+    axes[1, 1].set_title("Low pass horizontal gradient")
+    axes[0, 2].imshow(mask_overlay, cmap="grey")
+    axes[0, 2].set_title("Grain edges")
+    axes[1, 2].imshow(rgb_highpass, cmap="grey")
+    axes[1, 2].set_title("Grains with smears removed")
 
-    ax1.imshow(imshows[0], cmap="gray", interpolation="nearest")
-    ax2.imshow(imshows[1], cmap="gray", interpolation="nearest")
-    ax3.imshow(imshows[2], cmap="gray", interpolation="nearest")
-    ax4.imshow(imshows[3], cmap="gray", interpolation="nearest")
-    ax5.imshow(rgb_highpass, cmap="gray", interpolation="nearest")
-
-    for ax in [ax1, ax2, ax3, ax4, ax5]:
+    for ax in axes.ravel():
         ax.axis("off")
 
     plt.tight_layout()
