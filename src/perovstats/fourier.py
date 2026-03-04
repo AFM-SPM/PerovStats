@@ -49,7 +49,7 @@ def create_masks(
         min_threshold = config["mask"]["threshold_bounds"][0]
         max_threshold = config["mask"]["threshold_bounds"][1]
 
-        # Cleaning config options
+        # Cleaning config options - adjusted for pixel to nm scaling
         area_threshold = config["mask"]["cleaning"]["area_threshold"]
         if area_threshold:
             area_threshold = area_threshold / (pixel_to_nm_scaling**2)
@@ -57,8 +57,10 @@ def create_masks(
         else:
             disk_radius = None
 
-        # Smoothing config options
+        # Smoothing config options - adjusted for pixel to nm scaling
         smooth_sigma = config["mask"]["smoothing"]["sigma"]
+        if smooth_sigma:
+            smooth_sigma = smooth_sigma / pixel_to_nm_scaling
         smooth_func = config["mask"]["smoothing"]["smooth_function"]
         if smooth_func == "gaussian":
             smooth_func = ski.filters.gaussian
