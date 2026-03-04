@@ -108,7 +108,7 @@ def test_normalise_array(arr: np.array, expected: np.array):
                 0,
                 4,
                 19.53125,
-                1.92,
+                3.84,
                 id="mad thresholding"
             ),
             pytest.param(
@@ -121,7 +121,7 @@ def test_normalise_array(arr: np.array, expected: np.array):
                 0,
                 4,
                 19.53125,
-                2.0,
+                1.12,
                 id="std thresholding"
             )
         ]
@@ -145,6 +145,7 @@ def test_find_threshold(
     threshold = find_threshold(
         filename,
         dummy_high_pass,
+        pixel_to_nm_scaling,
         threshold_func,
         smooth_sigma,
         smooth_func,
