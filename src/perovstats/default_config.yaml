@@ -43,6 +43,6 @@ mask:
 remove_smears:
     run: True
     smooth_sigma: 1 # How much to smooth the high pass image before comparing gradients
-    smear_threshold: 2 # Minimum value for y gradient / x gradient in the high pass image, meaning possible smear
-    min_smear_area: 200 # in px^2, areas under this value are removed and ignored
-    lowpass_threshold: 100 # Minimum horizontal gradient in the low pass image to be marked
+    smear_threshold: 1.9 # Minimum value for y gradient / x gradient in the high pass image, meaning possible smear
+    min_smear_area: 175 # in px^2, areas under this value are removed and ignored
+    lowpass_threshold: 95 # Minimum horizontal gradient in the low pass image to be marked

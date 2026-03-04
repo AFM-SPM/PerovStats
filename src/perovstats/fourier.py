@@ -70,6 +70,7 @@ def create_masks(
         threshold = find_threshold(
             image_object.filename,
             im,
+            pixel_to_nm_scaling=pixel_to_nm_scaling,
             threshold_func=threshold_func,
             smooth_sigma=smooth_sigma,
             smooth_func=smooth_func,
@@ -86,6 +87,7 @@ def create_masks(
         logger.info(f"[{image_object.filename}] : Creating grain mask")
         np_mask = create_grain_mask(
             im,
+            pixel_to_nm_scaling=pixel_to_nm_scaling,
             threshold_func=threshold_func,
             threshold=threshold,
             smooth_sigma=smooth_sigma,

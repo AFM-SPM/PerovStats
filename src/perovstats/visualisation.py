@@ -34,7 +34,7 @@ def create_plots(
         mask_overlay = normalise_array(mask_overlay)
         mask_overlay[image_object.mask > 0] = [1, 0, 0]
 
-        # ~~~~ TEMP FOR VISUALISATION DURING DEBUGGING ~~~~~~~~~~~~~~~~~~~~~
+        # ~~~~~~~~~~~~ TEMP FOR VISUALISATION DURING DEBUGGING ~~~~~~~~~~~~~~
         _, axes = plt.subplots(2, 3, figsize=(12, 8))
 
         axes[0, 0].imshow(imshows[0], cmap="grey")
@@ -55,4 +55,4 @@ def create_plots(
 
         plt.tight_layout()
         plt.show()
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -77,6 +77,7 @@ def clean_mask(
 
 def create_grain_mask(
     im: np.ndarray,
+    pixel_to_nm_scaling: float,
     threshold_func: Callable = threshold_mean_std,
     threshold: float | None = None,
     smooth_func: Callable | None = None,
@@ -94,6 +95,8 @@ def create_grain_mask(
     ----------
     im : numpy.ndarray
         The image to be masked.
+    pixel_to_nm_scaling : float
+        The scale of the image for standardising parameters
     threshold_func : Callable
         Threshold function.
     threshold : float
@@ -114,8 +117,13 @@ def create_grain_mask(
     numpy.ndarray
         Mask array.
     """
-    im_ = smooth_func(im, sigma=smooth_sigma) if smooth_func else im
+    scale_factor = 19.53125 / pixel_to_nm_scaling
+    disk_radius_scaled = int(round(disk_radius / scale_factor))
+    area_threshold_scaled = area_threshold / scale_factor
+    smooth_sigma_scaled = smooth_sigma / scale_factor
+
+    im_ = smooth_func(im, sigma=smooth_sigma_scaled) if smooth_func else im
     mask = im > threshold_func(im_, k=threshold)
-    mask = clean_mask(mask, area_threshold, disk_radius) if area_threshold else mask
+    mask = clean_mask(mask, area_threshold_scaled, disk_radius_scaled) if area_threshold else mask
     selection = ski.util.invert(mask)
     return ski.morphology.skeletonize(selection)
