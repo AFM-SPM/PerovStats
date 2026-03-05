@@ -32,8 +32,8 @@ def create_masks(
         # Remove/ ignore smears in high_pass image
         smear_config = config["remove_smears"]
         if smear_config["run"]:
-            image_object.smears, imshows = find_smear_areas(image_object.high_pass, image_object.low_pass, smear_config, fname)
-
+            image_object.smears, imshows, smears_removed = find_smear_areas(image_object.high_pass, image_object.low_pass, smear_config, fname)
+            image_object.smears_removed = smears_removed
             rgb_highpass = np.stack((image_object.high_pass,)*3, axis=-1)
             rgb_highpass = normalise_array(rgb_highpass)
             rgb_highpass[image_object.smears > 0] = [1, 0, 0]

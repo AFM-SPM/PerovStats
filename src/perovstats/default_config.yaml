@@ -36,7 +36,7 @@ mask:
   threshold_bounds: [0, 4] # Minimum and maximum thresholds for masking.
   smoothing:
     smooth_function: gaussian # Options: gaussian, difference_of_gaussians.
-    sigma: 6
+    sigma: 10
   cleaning:
     area_threshold: 10000 # in nm2.
     disk_radius_factor: 40

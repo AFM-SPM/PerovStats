@@ -78,6 +78,7 @@ class ImageData:
     high_pass: np.ndarray | None = None
     low_pass: np.ndarray | None = None
     smears: np.ndarray | None = None
+    smears_removed: bool | None = None
     grains: dict[int, Grain] | None = None
     file_directory: str | None = None
     filename: str | None = None
@@ -111,6 +112,7 @@ class ImageData:
             "mean_grain_size_nm2": self.mean_grain_size,
             "median_grain_size_nm2": self.median_grain_size,
             "mode_grain_size_nm2": self.mode_grain_size,
+            "smears_removed": self.smears_removed,
         }
 
 

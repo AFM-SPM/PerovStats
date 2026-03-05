@@ -58,11 +58,16 @@ def find_smear_areas(
     final_mask = binary_dilation(final_mask, structure=np.ones((3, 3)))
 
     labeled, n = label(final_mask)
-    logger.info(f"[{filename}] : Smear areas found: {n}")
 
     imshows = [high_pass, final_mask, mask, low_pass_gradient_mask]
 
-    return final_mask, imshows
+    logger.info(f"[{filename}] : Smear areas found: {n}")
+    if n < 5:
+        logger.info(f"[{filename}] : Minimum number of smear areas not met, skipping smear removal.")
+        empty_mask = np.zeros_like(final_mask)
+        return empty_mask, imshows, False
+
+    return final_mask, imshows, True
 
 
 def get_horizontal_gradients(
