@@ -43,6 +43,7 @@ def test_grain_to_dict(
                 'num_grains': 1,
                 'pixel_to_nm_scaling': 1,
                 'threshold': -0.8,
+                'smears_removed': True,
             }
         )
     ]

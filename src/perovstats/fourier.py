@@ -32,8 +32,8 @@ def create_masks(
         # Remove/ ignore smears in high_pass image
         smear_config = config["remove_smears"]
         if smear_config["run"]:
-            image_object.smears, imshows = find_smear_areas(image_object.high_pass, image_object.low_pass, smear_config, fname)
-
+            image_object.smears, imshows, smears_removed = find_smear_areas(image_object.high_pass, image_object.low_pass, smear_config, fname)
+            image_object.smears_removed = smears_removed
             rgb_highpass = np.stack((image_object.high_pass,)*3, axis=-1)
             rgb_highpass = normalise_array(rgb_highpass)
             rgb_highpass[image_object.smears > 0] = [1, 0, 0]
@@ -49,7 +49,7 @@ def create_masks(
         min_threshold = config["mask"]["threshold_bounds"][0]
         max_threshold = config["mask"]["threshold_bounds"][1]
 
-        # Cleaning config options
+        # Cleaning config options - adjusted for pixel to nm scaling
         area_threshold = config["mask"]["cleaning"]["area_threshold"]
         if area_threshold:
             area_threshold = area_threshold / (pixel_to_nm_scaling**2)
@@ -57,8 +57,10 @@ def create_masks(
         else:
             disk_radius = None
 
-        # Smoothing config options
+        # Smoothing config options - adjusted for pixel to nm scaling
         smooth_sigma = config["mask"]["smoothing"]["sigma"]
+        if smooth_sigma:
+            smooth_sigma = smooth_sigma / pixel_to_nm_scaling
         smooth_func = config["mask"]["smoothing"]["smooth_function"]
         if smooth_func == "gaussian":
             smooth_func = ski.filters.gaussian
@@ -70,6 +72,7 @@ def create_masks(
         threshold = find_threshold(
             image_object.filename,
             im,
+            pixel_to_nm_scaling=pixel_to_nm_scaling,
             threshold_func=threshold_func,
             smooth_sigma=smooth_sigma,
             smooth_func=smooth_func,
@@ -86,6 +89,7 @@ def create_masks(
         logger.info(f"[{image_object.filename}] : Creating grain mask")
         np_mask = create_grain_mask(
             im,
+            pixel_to_nm_scaling=pixel_to_nm_scaling,
             threshold_func=threshold_func,
             threshold=threshold,
             smooth_sigma=smooth_sigma,

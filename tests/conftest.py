@@ -96,6 +96,7 @@ def dummy_image_data_object(dummy_mask, dummy_high_pass, dummy_low_pass, dummy_o
         cutoff=0.9,
         pixel_to_nm_scaling=1,
         threshold=-0.8,
+        smears_removed=True,
     )
     return image_data
 

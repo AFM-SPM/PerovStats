@@ -193,6 +193,7 @@ def clean_smears(mask: np.ndarray, smear_mask: np.ndarray) -> np.ndarray:
 def find_threshold(
     filename: str,
     image: np.ndarray,
+    pixel_to_nm_scaling: float,
     threshold_func: callable,
     smooth_sigma: float,
     smooth_func: callable,
@@ -211,6 +212,8 @@ def find_threshold(
         Name of the image being processed.
     image : np.ndarray
         Numpy array of the high-passed image to use.
+    pixel_to_nm_scaling : float
+        Scale of the image for parameter standardisation.
     threshold_func : Callable
         Threshold function.
     smooth_sigma : Callable, optional
@@ -238,6 +241,7 @@ def find_threshold(
         curr_threshold = round(curr_threshold, 3)
         np_mask = create_grain_mask(
             image,
+            pixel_to_nm_scaling=pixel_to_nm_scaling,
             threshold_func=threshold_func,
             threshold=curr_threshold,
             smooth_sigma=smooth_sigma,

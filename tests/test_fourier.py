@@ -145,6 +145,7 @@ def test_find_threshold(
     threshold = find_threshold(
         filename,
         dummy_high_pass,
+        pixel_to_nm_scaling,
         threshold_func,
         smooth_sigma,
         smooth_func,

@@ -203,6 +203,7 @@ def main(args: list[str] | None = None) -> None:
     try:
         loadscans.get_data()
     except ValueError as e:
+        logger.warning(e)
         logger.warning(f"Channel {load_config['channel']} not found in file. Please ensure the config option is correct and all files contain the required channel.")
     image_dicts = loadscans.img_dict
 
