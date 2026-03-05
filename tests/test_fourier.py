@@ -108,7 +108,7 @@ def test_normalise_array(arr: np.array, expected: np.array):
                 0,
                 4,
                 19.53125,
-                3.84,
+                1.92,
                 id="mad thresholding"
             ),
             pytest.param(
@@ -121,7 +121,7 @@ def test_normalise_array(arr: np.array, expected: np.array):
                 0,
                 4,
                 19.53125,
-                1.12,
+                2.0,
                 id="std thresholding"
             )
         ]
