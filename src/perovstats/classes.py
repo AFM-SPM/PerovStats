@@ -47,6 +47,12 @@ class ImageData:
         Image showing the frequencies left above the frequency cutoff after performing a fourier transform.
     low_pass : np.ndarray
         Image showing the frequencies cut off by a fourier transform.
+    smears : np.ndarray
+        Mask of smear areas found.
+    smears_removed : bool
+        True or False depending if smears was run and completed.
+    smear_percent : float
+        The percentage of the total grain area that was removed by smear detection.
     grains : dict[int, Grain]
         Dictionary containing all grains as class objects, with an id int as the key.
     file_directory : str
@@ -79,6 +85,7 @@ class ImageData:
     low_pass: np.ndarray | None = None
     smears: np.ndarray | None = None
     smears_removed: bool | None = None
+    smear_percent: float | None = None
     grains: dict[int, Grain] | None = None
     file_directory: str | None = None
     filename: str | None = None
@@ -113,6 +120,7 @@ class ImageData:
             "median_grain_size_nm2": self.median_grain_size,
             "mode_grain_size_nm2": self.mode_grain_size,
             "smears_removed": self.smears_removed,
+            "smear_percent": self.smear_percent,
         }
 
 
