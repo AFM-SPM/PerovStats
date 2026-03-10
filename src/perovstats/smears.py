@@ -32,6 +32,8 @@ def find_smear_areas(
     min_size = config["min_smear_area"]
     lowpass_threshold = config["lowpass_threshold"]
 
+    MIN_SMEAR_AREAS = 6
+
     logger.info(f"[{filename}] : *** Finding smear areas ***")
 
     # Compare the horizontal and vertical gradient of the high pass, marking pixels(/ areas) that have a
@@ -59,15 +61,13 @@ def find_smear_areas(
 
     labeled, n = label(final_mask)
 
-    imshows = [high_pass, final_mask, mask, low_pass_gradient_mask]
-
     logger.info(f"[{filename}] : Smear areas found: {n}")
-    if n < 5:
+    if n < MIN_SMEAR_AREAS:
         logger.info(f"[{filename}] : Minimum number of smear areas not met, skipping smear removal.")
         empty_mask = np.zeros_like(final_mask)
-        return empty_mask, imshows, False
+        return empty_mask, False
 
-    return final_mask, imshows, True
+    return final_mask, True
 
 
 def get_horizontal_gradients(

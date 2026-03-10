@@ -229,10 +229,10 @@ def main(args: list[str] | None = None) -> None:
         run_filters(perovstats_object.config, image_object)
 
         # Apply fourier analysis and create binary mask of resultant high-pass image
-        imshows = create_masks(perovstats_object.config, image_object)
+        create_masks(perovstats_object.config, image_object)
 
         # Find grains from mask
-        find_grains(perovstats_object.config, image_object, imshows=imshows)
+        find_grains(perovstats_object.config, image_object)
 
         logger.info(f"[{image_object.filename}] : *** Exporting data ***")
 

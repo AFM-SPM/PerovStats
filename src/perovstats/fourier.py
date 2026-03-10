@@ -32,13 +32,11 @@ def create_masks(
         # Remove/ ignore smears in high_pass image
         smear_config = config["remove_smears"]
         if smear_config["run"]:
-            image_object.smears, imshows, smears_removed = find_smear_areas(image_object.high_pass, image_object.low_pass, smear_config, fname)
+            image_object.smears, smears_removed = find_smear_areas(image_object.high_pass, image_object.low_pass, smear_config, fname)
             image_object.smears_removed = smears_removed
             rgb_highpass = np.stack((image_object.high_pass,)*3, axis=-1)
             rgb_highpass = normalise_array(rgb_highpass)
             rgb_highpass[image_object.smears > 0] = [1, 0, 0]
-        else:
-            imshows = None
 
         # Thresholding config options
         threshold_func = config["mask"]["threshold_function"]
@@ -89,7 +87,6 @@ def create_masks(
         logger.info(f"[{image_object.filename}] : Creating grain mask")
         np_mask = create_grain_mask(
             im,
-            pixel_to_nm_scaling=pixel_to_nm_scaling,
             threshold_func=threshold_func,
             threshold=threshold,
             smooth_sigma=smooth_sigma,
@@ -109,8 +106,6 @@ def create_masks(
         rgb_highpass = normalise_array(rgb_highpass)
         rgb_highpass[np_mask > 0] = [1, 0, 0]
         plt.imsave(output_dir / fname / "images" / f"{fname}_mask_overlay.jpg", rgb_highpass)
-
-    return imshows
 
 
 def split_frequencies(
@@ -157,9 +152,11 @@ def split_frequencies(
             max_cutoff=max_cutoff,
             cutoff_step=cutoff_step,
             min_rms=min_rms,
+            pixel_to_nm_scaling=pixel_to_nm_scaling,
         )
 
         if not cutoff:
+            logger.error(f"[{filename}] : Cutoff frequency could not be determined. Skipping image..")
             return
 
         cutoff_nm = 2 * pixel_to_nm_scaling / cutoff

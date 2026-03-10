@@ -27,8 +27,7 @@ def test_threshold_mad(dummy_original_image: np.ndarray, k: float) -> None:
 
 def test_create_grain_mask(dummy_original_image: np.ndarray) -> None:
     """Test creating a grain mask."""
-    pixel_to_nm_scaling = 19.53125
-    x = create_grain_mask(dummy_original_image, pixel_to_nm_scaling=pixel_to_nm_scaling, threshold=3)
+    x = create_grain_mask(dummy_original_image, threshold=3)
     assert x.shape == dummy_original_image.shape
     assert x.dtype == np.dtype(bool)
 
