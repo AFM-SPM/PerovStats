@@ -162,6 +162,7 @@ def find_cutoff(
         max_cutoff: float,
         cutoff_step: float,
         min_rms: float,
+        pixel_to_nm_scaling: float,
     ) -> float:
     """Iterate through possible cutoff points to find one with the smallest RMS over a given value."""
     image = image_object.image_original
@@ -169,6 +170,8 @@ def find_cutoff(
     min_found_rms = float('inf')
     cutoff_values = []
     rms_values = []
+    # Adjust the minimum RMS based on the image scaling
+    min_rms = min_rms + (pixel_to_nm_scaling * 0.1)
 
     for cutoff in np.arange(min_cutoff, max_cutoff, cutoff_step):
         high_pass, _ = frequency_split(image, cutoff, edge_width)

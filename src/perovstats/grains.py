@@ -7,17 +7,17 @@ import numpy.typing as npt
 from skimage import morphology
 from skimage.color import label2rgb
 from skimage.measure import label, regionprops
+import matplotlib.pyplot as plt
 
 from .classes import Grain, ImageData
-from .visualisation import create_plots
 from .statistics import find_circularity_rating
 from .segmentation import create_grain_mask
+from .utils import normalise_array
 
 
 def find_grains(
         config: dict[str, any],
         image_object: ImageData,
-        imshows: list[np.ndarray] # TEMP
     ) -> None:
     """
     Method to find grains from a mask and list the stats about them.
@@ -107,7 +107,14 @@ def find_grains(
         f"[{filename}] : Obtained {image_object.num_grains} grains",
     )
 
-    create_plots(Path(config_yaml["output_dir"]) / filename / "images", filename, mask_data, image_object=image_object, imshows=imshows)
+    # Save high-pass with mask skeleton overlay
+    mask_rgb = mask_data["mask_rgb"]
+    smear_overlay = np.stack((image_object.high_pass,)*3, axis=-1)
+    smear_overlay = normalise_array(smear_overlay)
+    mask_2d = np.all(mask_rgb == 0, axis=2)
+    smear_overlay[mask_2d == 0] = [1, 1, 1]
+    smear_overlay[image_object.smears == 1] = [1, 0, 0]
+    plt.imsave(Path(config_yaml["output_dir"]) / filename / "images" / f"{filename}_smears.jpg", smear_overlay)
 
 
 def find_median_grain_size(values: list[float]) -> float:
@@ -241,7 +248,6 @@ def find_threshold(
         curr_threshold = round(curr_threshold, 3)
         np_mask = create_grain_mask(
             image,
-            pixel_to_nm_scaling=pixel_to_nm_scaling,
             threshold_func=threshold_func,
             threshold=curr_threshold,
             smooth_sigma=smooth_sigma,

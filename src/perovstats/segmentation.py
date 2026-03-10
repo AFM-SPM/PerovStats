@@ -77,7 +77,6 @@ def clean_mask(
 
 def create_grain_mask(
     im: np.ndarray,
-    pixel_to_nm_scaling: float,
     threshold_func: Callable = threshold_mean_std,
     threshold: float | None = None,
     smooth_func: Callable | None = None,
@@ -117,12 +116,6 @@ def create_grain_mask(
     numpy.ndarray
         Mask array.
     """
-    # scale_factor = 19.53125 / pixel_to_nm_scaling
-    # if area_threshold:
-    #     area_threshold_scaled = area_threshold / scale_factor
-    #     disk_radius_scaled = int(round(disk_radius / scale_factor))
-    # if smooth_func:
-    #     smooth_sigma_scaled = smooth_sigma / scale_factor
     smooth_sigma_scaled = smooth_sigma
     area_threshold_scaled = area_threshold
     disk_radius_scaled = disk_radius

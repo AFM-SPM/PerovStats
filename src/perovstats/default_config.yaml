@@ -30,7 +30,7 @@ freqsplit:
   edge_width: 0.03 # Width of borders of grains
   cutoff_bounds: [0, 0.2] # Minimum and maximum cutoff points for frequency splitting.
   cutoff_step: 0.005 # Amount to increase the tested cutoff by for each iteration.
-  min_rms: 12 # Minimum roughness mean score of a high-pass after splitting along the cutoff.
+  min_rms: 9 # Minimum roughness mean score of a high-pass after splitting along the cutoff.
 mask:
   threshold_function: mad # Options: std, mad.
   threshold_bounds: [0, 4] # Minimum and maximum thresholds for masking.

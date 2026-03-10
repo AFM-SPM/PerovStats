@@ -1,6 +1,3 @@
-import matplotlib
-# matplotlib.use("Agg")
-
 from yaml import safe_load
 from pathlib import Path
 import numpy as np
@@ -49,10 +46,12 @@ def dummy_low_pass() -> np.ndarray:
     arr = np.load("./tests/resources/small_low_pass.npy")
     return arr
 
+
 @pytest.fixture
 def dummy_low_pass_h_gradient() -> np.ndarray:
     arr = np.load("./tests/resources/small_low_pass_h_gradient.npy")
     return arr
+
 
 @pytest.fixture
 def dummy_smear_mask() -> np.ndarray:
