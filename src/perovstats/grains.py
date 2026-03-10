@@ -197,7 +197,6 @@ def clean_smears(mask: np.ndarray, smear_mask: np.ndarray) -> np.ndarray:
     for region in mask_regionprops:
         region_crop = mask_labelled[region.slice] == region.label
         smear_crop = smear_mask[region.slice].astype(bool)
-        # region_mask = (mask_labelled == region.label)
         if np.any(region_crop & smear_crop):
             removed_grains_area += region.area
             mask[region.slice][region_crop] = 0
