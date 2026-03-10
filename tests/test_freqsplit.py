@@ -70,7 +70,7 @@ def test_frequency_split(dummy_original_image):
 
 
 @pytest.mark.parametrize(
-    ("edge_width", "min_cutoff", "max_cutoff", "cutoff_step", "min_rms", "expected"),
+    ("edge_width", "min_cutoff", "max_cutoff", "cutoff_step", "min_rms", "pixel_to_nm_scaling", "expected"),
     [
         pytest.param(
             0.03,
@@ -78,6 +78,7 @@ def test_frequency_split(dummy_original_image):
             10,
             1,
             0,
+            1,
             1,
             id="Successful cutoff calculation"
         ),
@@ -87,6 +88,7 @@ def test_frequency_split(dummy_original_image):
             10,
             1,
             1000,
+            1,
             None,
             id="No cutoff found"
         ),
@@ -99,6 +101,7 @@ def test_find_cutoff(
     max_cutoff: float,
     cutoff_step: float,
     min_rms: float,
+    pixel_to_nm_scaling: float,
     expected: float | None,
 ):
     """Test finding in ideal cutoff for given image."""
@@ -109,6 +112,7 @@ def test_find_cutoff(
         max_cutoff=max_cutoff,
         cutoff_step=cutoff_step,
         min_rms=min_rms,
+        pixel_to_nm_scaling=pixel_to_nm_scaling
     )
     assert cutoff == expected
 

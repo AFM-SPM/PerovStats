@@ -49,7 +49,11 @@ def find_grains(
 
     # Remove grains in/ touching smears
     if config["remove_smears"]["run"]:
-        labelled_mask = clean_smears(labelled_mask, image_object.smears)
+        labelled_mask, area_removed = clean_smears(labelled_mask, image_object.smears)
+    else:
+        area_removed = 0
+    smear_percent = round((area_removed / (mask.shape[0] * mask.shape[1])) * 100, 3)
+    image_object.smear_percent = smear_percent
 
     labelled_mask_rgb = label2rgb(labelled_mask, bg_label=0, saturation=0)
 
@@ -114,7 +118,9 @@ def find_grains(
     mask_2d = np.all(mask_rgb == 0, axis=2)
     smear_overlay[mask_2d == 0] = [1, 1, 1]
     smear_overlay[image_object.smears == 1] = [1, 0, 0]
-    plt.imsave(Path(config_yaml["output_dir"]) / filename / "images" / f"{filename}_smears.jpg", smear_overlay)
+    save_dir = Path(config_yaml["output_dir"]) / filename / "images"
+    save_dir.mkdir(parents=True, exist_ok=True)
+    plt.imsave(save_dir / f"{filename}_smears.jpg", smear_overlay)
 
 
 def find_median_grain_size(values: list[float]) -> float:
@@ -187,14 +193,17 @@ def clean_smears(mask: np.ndarray, smear_mask: np.ndarray) -> np.ndarray:
         The resultant grain mask with sections overlapping with the smear mask removed.
 
     """
+    removed_grains_area = 0
     mask_labelled = morphology.label(mask)
     mask_regionprops = regionprops(mask_labelled)
     for region in mask_regionprops:
-        region_mask = (mask_labelled == region.label)
-        if np.any(region_mask & smear_mask.astype(bool)):
-            mask[region_mask] = 0
+        region_crop = mask_labelled[region.slice] == region.label
+        smear_crop = smear_mask[region.slice].astype(bool)
+        if np.any(region_crop & smear_crop):
+            removed_grains_area += region.area
+            mask[region.slice][region_crop] = 0
 
-    return mask
+    return mask, removed_grains_area
 
 
 def find_threshold(
