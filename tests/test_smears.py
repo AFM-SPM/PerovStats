@@ -11,7 +11,7 @@ def test_find_smear_areas(
 ):
     config = default_config["remove_smears"]
     filename = "dummy_filename"
-    smear_mask, _, _ = find_smear_areas(dummy_high_pass, dummy_low_pass, config, filename)
+    smear_mask, _ = find_smear_areas(dummy_high_pass, dummy_low_pass, config, filename)
 
     assert np.array_equal(smear_mask, dummy_smear_mask)
 

@@ -118,7 +118,9 @@ def find_grains(
     mask_2d = np.all(mask_rgb == 0, axis=2)
     smear_overlay[mask_2d == 0] = [1, 1, 1]
     smear_overlay[image_object.smears == 1] = [1, 0, 0]
-    plt.imsave(Path(config_yaml["output_dir"]) / filename / "images" / f"{filename}_smears.jpg", smear_overlay)
+    save_dir = Path(config_yaml["output_dir"]) / filename / "images"
+    save_dir.mkdir(parents=True, exist_ok=True)
+    plt.imsave(save_dir / f"{filename}_smears.jpg", smear_overlay)
 
 
 def find_median_grain_size(values: list[float]) -> float:
