@@ -7,15 +7,11 @@ import numpy as np
 from PIL import Image
 import pyfftw
 from matplotlib import pyplot as plt
-import skimage as ski
 
 from .core.classes import ImageData
 from .core.image_processing import extend_image, calculate_rms, normalise_array
 from .core.segmentation import (
     create_frequency_mask,
-    threshold_mad,
-    threshold_mean_std,
-    find_threshold,
     create_grain_mask
 )
 from .smears import find_smear_areas
@@ -232,63 +228,34 @@ def run_frequency_splitting(
         if smear_config["run"]:
             image_object.smears, smears_removed = find_smear_areas(image_object.high_pass, image_object.low_pass, smear_config, fname)
             image_object.smears_removed = smears_removed
+
             rgb_highpass = np.stack((image_object.high_pass,)*3, axis=-1)
             rgb_highpass = normalise_array(rgb_highpass)
             rgb_highpass[image_object.smears > 0] = [1, 0, 0]
 
-        # Thresholding config options
-        threshold_func = config["mask"]["threshold_function"]
-        if threshold_func == "mad":
-            threshold_func = threshold_mad
-        elif threshold_func == "std":
-            threshold_func = threshold_mean_std
-        min_threshold = config["mask"]["threshold_bounds"][0]
-        max_threshold = config["mask"]["threshold_bounds"][1]
+        # Scale threshold block size with image scaling and round to nearest odd integer
+        threshold_block_size = config["segmentation"]["threshold_block_size"] / pixel_to_nm_scaling
+        threshold_block_size = 2 * round((threshold_block_size - 1) / 2) + 1
 
         # Cleaning config options - adjusted for pixel to nm scaling
-        area_threshold = config["mask"]["cleaning"]["area_threshold"]
+        area_threshold = config["segmentation"]["cleaning"]["area_threshold"]
         if area_threshold:
             area_threshold = area_threshold / (pixel_to_nm_scaling**2)
-            disk_radius = config["mask"]["cleaning"]["disk_radius_factor"] / pixel_to_nm_scaling
+            disk_radius = config["segmentation"]["cleaning"]["disk_radius_factor"] / pixel_to_nm_scaling
         else:
             disk_radius = None
 
         # Smoothing config options - adjusted for pixel to nm scaling
-        smooth_sigma = config["mask"]["smoothing"]["sigma"]
+        smooth_sigma = config["segmentation"]["smoothing"]["sigma"]
         if smooth_sigma:
             smooth_sigma = smooth_sigma / pixel_to_nm_scaling
-        smooth_func = config["mask"]["smoothing"]["smooth_function"]
-        if smooth_func == "gaussian":
-            smooth_func = ski.filters.gaussian
-        elif smooth_func == "difference_of_gaussians":
-            smooth_func = ski.filters.difference_of_gaussians
 
         logger.info(f"[{image_object.filename}] : *** Mask creation ***")
-
-        threshold = find_threshold(
-            image_object.filename,
-            im,
-            pixel_to_nm_scaling=pixel_to_nm_scaling,
-            threshold_func=threshold_func,
-            smooth_sigma=smooth_sigma,
-            smooth_func=smooth_func,
-            area_threshold=area_threshold,
-            disk_radius=disk_radius,
-            min_threshold=min_threshold,
-            max_threshold=max_threshold,
-        )
-        if threshold is None:
-            return
-
-        image_object.threshold = threshold
-
         logger.info(f"[{image_object.filename}] : Creating grain mask")
         np_mask = create_grain_mask(
             im,
-            threshold_func=threshold_func,
-            threshold=threshold,
+            threshold_block_size=threshold_block_size,
             smooth_sigma=smooth_sigma,
-            smooth_func=smooth_func,
             area_threshold=area_threshold,
             disk_radius=disk_radius,
         )

@@ -31,17 +31,15 @@ freqsplit:
   cutoff_bounds: [0, 0.2] # Minimum and maximum cutoff points for frequency splitting.
   cutoff_step: 0.005 # Amount to increase the tested cutoff by for each iteration.
   min_rms: 9 # Minimum roughness mean score of a high-pass after splitting along the cutoff.
-mask:
-  threshold_function: mad # Options: std, mad.
-  threshold_bounds: [0, 4] # Minimum and maximum thresholds for masking.
+segmentation:
   smoothing:
-    smooth_function: gaussian # Options: gaussian, difference_of_gaussians.
-    sigma: 10
+    sigma: 8
+  threshold_block_size: 1000
   cleaning:
     area_threshold: 10000 # in nm2.
     disk_radius_factor: 40
 remove_smears:
-    run: True
+    run: true
     smooth_sigma: 1 # How much to smooth the high pass image before comparing gradients
     smear_threshold: 1.9 # Minimum value for y gradient / x gradient in the high pass image, meaning possible smear
     min_smear_area: 175 # in px^2, areas under this value are removed and ignored
