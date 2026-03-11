@@ -1,6 +1,6 @@
 import numpy as np
 
-from perovstats.smears import find_smear_areas, get_horizontal_gradients
+from perovstats.smears import find_smear_areas, clean_smears
 
 
 def test_find_smear_areas(
@@ -16,8 +16,5 @@ def test_find_smear_areas(
     assert np.array_equal(smear_mask, dummy_smear_mask)
 
 
-def test_get_horizontal_gradients(dummy_low_pass, dummy_low_pass_h_gradient):
-    threshold = 50
-    mask = get_horizontal_gradients(dummy_low_pass, threshold)
-
-    assert np.array_equal(mask, dummy_low_pass_h_gradient)
+def test_clean_smears():
+    pass

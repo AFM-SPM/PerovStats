@@ -3,7 +3,7 @@ import copy
 from loguru import logger
 from topostats.filters import Filters
 
-from .classes import ImageData
+from .core.classes import ImageData
 
 def run_filters(
     config: dict[str, any],

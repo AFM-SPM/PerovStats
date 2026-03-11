@@ -3,16 +3,14 @@ from pathlib import Path
 
 from loguru import logger
 import numpy as np
-import numpy.typing as npt
-from skimage import morphology
 from skimage.color import label2rgb
 from skimage.measure import label, regionprops
 import matplotlib.pyplot as plt
 
-from .classes import Grain, ImageData
-from .statistics import find_circularity_rating
-from .segmentation import create_grain_mask
-from .utils import normalise_array
+from .core.classes import Grain, ImageData
+from .core.image_processing import normalise_array
+from .core.segmentation import tidy_border
+from .smears import clean_smears
 
 
 def find_grains(
@@ -145,144 +143,9 @@ def find_mode_grain_size(values: list[float]) -> float:
     return max(counts, key=counts.get)
 
 
-@staticmethod
-def tidy_border(mask: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
+def find_circularity_rating(grain_area: float, grain_perimeter: float) -> float:
     """
-    Remove whole grains touching the border.
-
-    Parameters
-    ----------
-    mask : npt.NDArray
-        3-D Numpy array of the grain mask tensor.
-
-    Returns
-    -------
-    npt.NDArray
-        3-D Numpy array of the grain mask tensor with grains touching the border removed.
+    Take a grain mask and use the isoperimetric ratio to give it a rating (0 - 1)
+    for how circular it is.
     """
-    # Find the grains that touch the border then remove them from the full mask tensor
-    mask_labelled = morphology.label(mask)
-    mask_regionprops = regionprops(mask_labelled)
-    for region in mask_regionprops:
-        if (
-            region.bbox[0] == 0
-            or region.bbox[1] == 0
-            or region.bbox[2] == mask.shape[0]
-            or region.bbox[3] == mask.shape[1]
-        ):
-            mask[mask_labelled == region.label] = 0
-
-    return mask
-
-
-def clean_smears(mask: np.ndarray, smear_mask: np.ndarray) -> np.ndarray:
-    """
-    Compare the found grain segments with the previously computed smear mask
-    and remove grains that overlap with any part of the mask.
-
-    Parameters
-    ----------
-    mask : np.ndarray
-        The grain mask.
-    smear_mask : np.ndarray
-        The smear mask.
-
-    Returns
-    -------
-    np.ndarray
-        The resultant grain mask with sections overlapping with the smear mask removed.
-
-    """
-    removed_grains_area = 0
-    mask_labelled = morphology.label(mask)
-    mask_regionprops = regionprops(mask_labelled)
-    for region in mask_regionprops:
-        region_crop = mask_labelled[region.slice] == region.label
-        smear_crop = smear_mask[region.slice].astype(bool)
-        if np.any(region_crop & smear_crop):
-            removed_grains_area += region.area
-            mask[region.slice][region_crop] = 0
-
-    return mask, removed_grains_area
-
-
-def find_threshold(
-    filename: str,
-    image: np.ndarray,
-    pixel_to_nm_scaling: float,
-    threshold_func: callable,
-    smooth_sigma: float,
-    smooth_func: callable,
-    area_threshold: float,
-    disk_radius: int,
-    min_threshold: float,
-    max_threshold: float,
-) -> float:
-    """
-    Loop through possible threshold values and select the value
-    that produces the most grains.
-
-    Parameters
-    ----------
-    filename: str
-        Name of the image being processed.
-    image : np.ndarray
-        Numpy array of the high-passed image to use.
-    pixel_to_nm_scaling : float
-        Scale of the image for parameter standardisation.
-    threshold_func : Callable
-        Threshold function.
-    smooth_sigma : Callable, optional
-        Smoothing function.
-    smooth_func : dict, optional
-        Arguments to be passed to the smoothing function.
-    area_threshold : float
-        The area threshold.
-    disk_radius : float
-        The disk radius.
-    pixel_to_nm_scaling : float
-        The scale factor of pixels:nm.
-
-    Returns
-    -------
-    float
-        The selected best threshold.
-    """
-    logger.info(f"[{filename}] : Finding threshold")
-
-    best_threshold = None
-    best_grain_num = 0
-    threshold_step = (max_threshold - min_threshold) / 50
-    for curr_threshold in np.arange(min_threshold, max_threshold, threshold_step):
-        curr_threshold = round(curr_threshold, 3)
-        np_mask = create_grain_mask(
-            image,
-            threshold_func=threshold_func,
-            threshold=curr_threshold,
-            smooth_sigma=smooth_sigma,
-            smooth_func=smooth_func,
-            area_threshold=area_threshold,
-            disk_radius=disk_radius,
-        )
-
-        mask = np_mask.astype(bool)
-        mask = np.invert(mask)
-
-        labelled_mask = label(mask, connectivity=1)
-
-        # Remove grains touching the edge
-        labelled_mask = tidy_border(labelled_mask)
-        mask_regionprops = regionprops(labelled_mask)
-
-        if len(mask_regionprops) >= best_grain_num:
-            best_grain_num = len(mask_regionprops)
-            best_threshold = curr_threshold
-
-    if best_grain_num == 0:
-        logger.warning(f"[{filename}] : No grains could be found for any tested threshold.",
-                       "consider increasing the threshold bounds in the config.",
-                       "Skipping image..")
-        return None
-
-    logger.info(f"[{filename}] : Best threshold found: {best_threshold}")
-    return best_threshold
+    return (4 * np.pi * grain_area) / (grain_perimeter * grain_perimeter)

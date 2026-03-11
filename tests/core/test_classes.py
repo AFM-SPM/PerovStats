@@ -1,6 +1,6 @@
 import pytest
 
-from perovstats.classes import Grain, ImageData
+from perovstats.core.classes import Grain, ImageData
 
 
 @pytest.mark.parametrize(
