@@ -144,7 +144,7 @@ def setup_logger():
     logger.add("logs/PerovStats-{time:YYYY-MM-DD-HH-mm-ss}.log", level="DEBUG")
     logger.add(sys.stdout,
                level="DEBUG",
-               format="<blue>{time:HH:mm:ss}</blue> | <level>{level: <8}</level> | <magenta>{file: <12}</magenta> | {message}",
+               format="<blue>{time:HH:mm:ss}</blue> | <level>{level: <7}</level> | <magenta>{file: <15}</magenta> | {message}",
                colorize=True)
 
 
