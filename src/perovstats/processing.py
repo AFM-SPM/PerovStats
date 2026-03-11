@@ -8,7 +8,7 @@ from .core.io import save_to_csv, save_config
 from .core.classes import ImageData, PerovStats
 from .filters import run_filters
 from .grains import find_grains
-from .fourier import create_masks
+from .fourier import run_frequency_splitting
 
 
 def process(
@@ -57,7 +57,7 @@ def process(
         run_filters(perovstats_object.config, image_object)
 
         # Apply fourier analysis and create binary mask of resultant high-pass image
-        create_masks(perovstats_object.config, image_object)
+        run_frequency_splitting(perovstats_object.config, image_object)
 
         # Find grains from mask
         find_grains(perovstats_object.config, image_object)
