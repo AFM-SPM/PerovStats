@@ -81,7 +81,7 @@ def split_frequencies(
         image_object.cutoff_freq_nm = cutoff_nm
 
         logger.info(f"[{filename}] : Splitting image frequencies")
-        high_pass, low_pass = frequency_split(
+        high_pass, low_pass = perform_fourier(
             image,
             cutoff=cutoff,
             edge_width=edge_width,
@@ -116,7 +116,7 @@ def split_frequencies(
     img.save(file_output_dir / "images" / f"{filename}_original.jpg")
 
 
-def frequency_split(
+def perform_fourier(
     image: np.ndarray,
     cutoff: float,
     edge_width: float,
@@ -196,7 +196,7 @@ def find_cutoff(
     min_rms = min_rms + (pixel_to_nm_scaling * 0.1)
 
     for cutoff in np.arange(min_cutoff, max_cutoff, cutoff_step):
-        high_pass, _ = frequency_split(image, cutoff, edge_width)
+        high_pass, _ = perform_fourier(image, cutoff, edge_width)
         current_rms = calculate_rms(high_pass)
 
         cutoff_values.append(cutoff)
@@ -213,7 +213,7 @@ def find_cutoff(
     return best_cutoff
 
 
-def create_masks(
+def run_frequency_splitting(
     config: dict[str, any],
     image_object: ImageData
 ) -> None:

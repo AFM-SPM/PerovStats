@@ -3,17 +3,17 @@ import pytest
 
 from perovstats.core.classes import PerovStats, ImageData
 from perovstats.fourier import (
-    frequency_split,
+    perform_fourier,
     find_cutoff,
     split_frequencies,
-    create_masks
+    run_frequency_splitting
 )
 
 
-def test_create_masks(dummy_perovstats_object: PerovStats):
+def test_run_frequency_splitting(dummy_perovstats_object: PerovStats):
     image_data = dummy_perovstats_object.images[0]
 
-    create_masks(dummy_perovstats_object.config, image_data)
+    run_frequency_splitting(dummy_perovstats_object.config, image_data)
 
     assert image_data.mask.shape == image_data.image_original.shape
 
@@ -51,9 +51,9 @@ def test_split_frequencies(image, dummy_perovstats_object: PerovStats):
     assert np.allclose((high_pass + low_pass), image)
 
 
-def test_frequency_split(dummy_original_image):
+def test_perform_fourier(dummy_original_image: np.ndarray):
     """Test splitting an image between background and foreground patterns."""
-    high_pass, low_pass = frequency_split(dummy_original_image, cutoff=1, edge_width=0.03)
+    high_pass, low_pass = perform_fourier(dummy_original_image, cutoff=1, edge_width=0.03)
 
     assert high_pass.shape == dummy_original_image.shape
     assert low_pass.shape == dummy_original_image.shape
