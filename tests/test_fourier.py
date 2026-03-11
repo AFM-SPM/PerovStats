@@ -1,10 +1,14 @@
 import numpy as np
 import pytest
-import skimage as ski
 
-from perovstats.classes import PerovStats
-from perovstats.fourier import split_frequencies, create_masks, normalise_array, find_threshold
-from perovstats.segmentation import threshold_mad, threshold_mean_std
+from perovstats.core.classes import PerovStats, ImageData
+from perovstats.fourier import (
+    frequency_split,
+    find_cutoff,
+    split_frequencies,
+    create_masks
+)
+
 
 def test_create_masks(dummy_perovstats_object: PerovStats):
     image_data = dummy_perovstats_object.images[0]
@@ -47,112 +51,58 @@ def test_split_frequencies(image, dummy_perovstats_object: PerovStats):
     assert np.allclose((high_pass + low_pass), image)
 
 
-@pytest.mark.parametrize(
-        ("arr", "expected"),
-        [
-            pytest.param(
-                np.array([
-                    [0, 1, 0],
-                    [1, 0, 1],
-                    [0, 1, 0]
-                ]),
-                np.array([
-                    [0, 1, 0],
-                    [1, 0, 1],
-                    [0, 1, 0]
-                ]),
-                id="bool array, no change"
-            ),
-            pytest.param(
-                np.array([
-                    [0.1, 0.6, 0.8],
-                    [0.8, 0, 0.4],
-                    [0.2, 0.9, 0.3]
-                ]),
-                np.array([
-                    [0.11076512, 0.66681495, 0.88923488],
-                    [0.88923488, 0, 0.44439502],
-                    [0.22197509, 1, 0.33318505]
-                ]),
-                id="float array"
-            )
-        ]
-)
-def test_normalise_array(arr: np.array, expected: np.array):
-    norm_arr = normalise_array(arr)
+def test_frequency_split(dummy_original_image):
+    """Test splitting an image between background and foreground patterns."""
+    high_pass, low_pass = frequency_split(dummy_original_image, cutoff=1, edge_width=0.03)
 
-    assert np.allclose(norm_arr, expected)
+    assert high_pass.shape == dummy_original_image.shape
+    assert low_pass.shape == dummy_original_image.shape
+    assert np.allclose((high_pass + low_pass), dummy_original_image)
 
 
 @pytest.mark.parametrize(
-        (
-            "filename",
-            "threshold_func",
-            "smooth_sigma",
-            "smooth_func",
-            "area_threshold",
-            "disk_radius",
-            "min_threshold",
-            "max_threshold",
-            "pixel_to_nm_scaling",
-            "expected"
+    ("edge_width", "min_cutoff", "max_cutoff", "cutoff_step", "min_rms", "pixel_to_nm_scaling", "expected"),
+    [
+        pytest.param(
+            0.03,
+            0,
+            10,
+            1,
+            0,
+            1,
+            1,
+            id="Successful cutoff calculation"
         ),
-        [
-            pytest.param(
-                "dummy_filename",
-                threshold_mad,
-                8,
-                ski.filters.gaussian,
-                10000,
-                40,
-                0,
-                4,
-                19.53125,
-                1.92,
-                id="mad thresholding"
-            ),
-            pytest.param(
-                "dummy_filename",
-                threshold_mean_std,
-                8,
-                ski.filters.gaussian,
-                10000,
-                40,
-                0,
-                4,
-                19.53125,
-                2.0,
-                id="std thresholding"
-            )
-        ]
+        pytest.param(
+            0.03,
+            0,
+            10,
+            1,
+            1000,
+            1,
+            None,
+            id="No cutoff found"
+        ),
+    ]
 )
-def test_find_threshold(
-    filename: str,
-    dummy_high_pass,
-    threshold_func: callable,
-    smooth_sigma: float,
-    smooth_func: callable,
-    area_threshold: float,
-    disk_radius: float,
-    min_threshold: float,
-    max_threshold: float,
+def test_find_cutoff(
+    dummy_image_data_object: ImageData,
+    edge_width: float,
+    min_cutoff: float,
+    max_cutoff: float,
+    cutoff_step: float,
+    min_rms: float,
     pixel_to_nm_scaling: float,
-    expected: float,
+    expected: float | None,
 ):
-    area_threshold = area_threshold / (pixel_to_nm_scaling**2)
-    disk_radius = disk_radius / pixel_to_nm_scaling
-
-    threshold = find_threshold(
-        filename,
-        dummy_high_pass,
-        pixel_to_nm_scaling,
-        threshold_func,
-        smooth_sigma,
-        smooth_func,
-        area_threshold,
-        disk_radius,
-        min_threshold=min_threshold,
-        max_threshold=max_threshold,
+    """Test finding in ideal cutoff for given image."""
+    cutoff = find_cutoff(
+        image_object=dummy_image_data_object,
+        edge_width=edge_width,
+        min_cutoff=min_cutoff,
+        max_cutoff=max_cutoff,
+        cutoff_step=cutoff_step,
+        min_rms=min_rms,
+        pixel_to_nm_scaling=pixel_to_nm_scaling
     )
-
-    assert threshold == expected
+    assert cutoff == expected

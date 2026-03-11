@@ -2,6 +2,10 @@ import numpy as np
 from scipy.ndimage import binary_closing, label, binary_dilation
 from loguru import logger
 from scipy import ndimage as ndi
+from skimage import morphology
+from skimage.measure import regionprops
+
+from .core.image_processing import get_horizontal_gradients
 
 
 def find_smear_areas(
@@ -70,15 +74,32 @@ def find_smear_areas(
     return final_mask, True
 
 
-def get_horizontal_gradients(
-        image: np.ndarray,
-        threshold: float
-    ) -> np.ndarray:
+def clean_smears(mask: np.ndarray, smear_mask: np.ndarray) -> np.ndarray:
     """
-    Use the sobel formula to assign a gradient to each pixel in an array
-    for the horizontal axis.
-    """
-    grad_x = ndi.sobel(image, axis=1)
-    mask = grad_x > threshold
+    Compare the found grain segments with the previously computed smear mask
+    and remove grains that overlap with any part of the mask.
 
-    return mask
+    Parameters
+    ----------
+    mask : np.ndarray
+        The grain mask.
+    smear_mask : np.ndarray
+        The smear mask.
+
+    Returns
+    -------
+    np.ndarray
+        The resultant grain mask with sections overlapping with the smear mask removed.
+
+    """
+    removed_grains_area = 0
+    mask_labelled = morphology.label(mask)
+    mask_regionprops = regionprops(mask_labelled)
+    for region in mask_regionprops:
+        region_crop = mask_labelled[region.slice] == region.label
+        smear_crop = smear_mask[region.slice].astype(bool)
+        if np.any(region_crop & smear_crop):
+            removed_grains_area += region.area
+            mask[region.slice][region_crop] = 0
+
+    return mask, removed_grains_area

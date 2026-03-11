@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from perovstats.classes import Grain, ImageData, PerovStats
+from perovstats.core.classes import Grain, ImageData, PerovStats
 
 BASE_DIR = Path.cwd()
 
