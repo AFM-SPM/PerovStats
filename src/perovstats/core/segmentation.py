@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from loguru import logger
 import numpy.typing as npt
 from skimage import morphology
-from skimage.measure import regionprops, label
+from skimage.measure import regionprops
 from scipy.special import erf
 import skimage as ski
 import numpy as np
@@ -215,83 +214,83 @@ def tidy_border(mask: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
     return mask
 
 
-def find_threshold(
-    filename: str,
-    image: np.ndarray,
-    pixel_to_nm_scaling: float,
-    threshold_func: callable,
-    smooth_sigma: float,
-    smooth_func: callable,
-    area_threshold: float,
-    disk_radius: int,
-    min_threshold: float,
-    max_threshold: float,
-) -> float:
-    """
-    Loop through possible threshold values and select the value
-    that produces the most grains.
+# def find_threshold(
+#     filename: str,
+#     image: np.ndarray,
+#     pixel_to_nm_scaling: float,
+#     threshold_func: callable,
+#     smooth_sigma: float,
+#     smooth_func: callable,
+#     area_threshold: float,
+#     disk_radius: int,
+#     min_threshold: float,
+#     max_threshold: float,
+# ) -> float:
+#     """
+#     Loop through possible threshold values and select the value
+#     that produces the most grains.
 
-    Parameters
-    ----------
-    filename: str
-        Name of the image being processed.
-    image : np.ndarray
-        Numpy array of the high-passed image to use.
-    pixel_to_nm_scaling : float
-        Scale of the image for parameter standardisation.
-    threshold_func : Callable
-        Threshold function.
-    smooth_sigma : Callable, optional
-        Smoothing function.
-    smooth_func : dict, optional
-        Arguments to be passed to the smoothing function.
-    area_threshold : float
-        The area threshold.
-    disk_radius : float
-        The disk radius.
-    pixel_to_nm_scaling : float
-        The scale factor of pixels:nm.
+#     Parameters
+#     ----------
+#     filename: str
+#         Name of the image being processed.
+#     image : np.ndarray
+#         Numpy array of the high-passed image to use.
+#     pixel_to_nm_scaling : float
+#         Scale of the image for parameter standardisation.
+#     threshold_func : Callable
+#         Threshold function.
+#     smooth_sigma : Callable, optional
+#         Smoothing function.
+#     smooth_func : dict, optional
+#         Arguments to be passed to the smoothing function.
+#     area_threshold : float
+#         The area threshold.
+#     disk_radius : float
+#         The disk radius.
+#     pixel_to_nm_scaling : float
+#         The scale factor of pixels:nm.
 
-    Returns
-    -------
-    float
-        The selected best threshold.
-    """
-    logger.info(f"[{filename}] : Finding threshold")
+#     Returns
+#     -------
+#     float
+#         The selected best threshold.
+#     """
+#     logger.info(f"[{filename}] : Finding threshold")
 
-    best_threshold = None
-    best_grain_num = 0
-    threshold_step = (max_threshold - min_threshold) / 50
-    for curr_threshold in np.arange(min_threshold, max_threshold, threshold_step):
-        curr_threshold = round(curr_threshold, 3)
-        np_mask = create_grain_mask(
-            image,
-            threshold_func=threshold_func,
-            threshold=curr_threshold,
-            smooth_sigma=smooth_sigma,
-            smooth_func=smooth_func,
-            area_threshold=area_threshold,
-            disk_radius=disk_radius,
-        )
+#     best_threshold = None
+#     best_grain_num = 0
+#     threshold_step = (max_threshold - min_threshold) / 50
+#     for curr_threshold in np.arange(min_threshold, max_threshold, threshold_step):
+#         curr_threshold = round(curr_threshold, 3)
+#         np_mask = create_grain_mask(
+#             image,
+#             threshold_func=threshold_func,
+#             threshold=curr_threshold,
+#             smooth_sigma=smooth_sigma,
+#             smooth_func=smooth_func,
+#             area_threshold=area_threshold,
+#             disk_radius=disk_radius,
+#         )
 
-        mask = np_mask.astype(bool)
-        mask = np.invert(mask)
+#         mask = np_mask.astype(bool)
+#         mask = np.invert(mask)
 
-        labelled_mask = label(mask, connectivity=1)
+#         labelled_mask = label(mask, connectivity=1)
 
-        # Remove grains touching the edge
-        labelled_mask = tidy_border(labelled_mask)
-        mask_regionprops = regionprops(labelled_mask)
+#         # Remove grains touching the edge
+#         labelled_mask = tidy_border(labelled_mask)
+#         mask_regionprops = regionprops(labelled_mask)
 
-        if len(mask_regionprops) >= best_grain_num:
-            best_grain_num = len(mask_regionprops)
-            best_threshold = curr_threshold
+#         if len(mask_regionprops) >= best_grain_num:
+#             best_grain_num = len(mask_regionprops)
+#             best_threshold = curr_threshold
 
-    if best_grain_num == 0:
-        logger.warning(f"[{filename}] : No grains could be found for any tested threshold.",
-                       "consider increasing the threshold bounds in the config.",
-                       "Skipping image..")
-        return None
+#     if best_grain_num == 0:
+#         logger.warning(f"[{filename}] : No grains could be found for any tested threshold.",
+#                        "consider increasing the threshold bounds in the config.",
+#                        "Skipping image..")
+#         return None
 
-    logger.info(f"[{filename}] : Best threshold found: {best_threshold}")
-    return best_threshold
+#     logger.info(f"[{filename}] : Best threshold found: {best_threshold}")
+#     return best_threshold
