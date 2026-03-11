@@ -4,11 +4,11 @@ from loguru import logger
 from topostats.io import LoadScans
 import pandas as pd
 
-from .grains import find_grains
-from .fourier import create_masks
 from .core.io import save_to_csv, save_config
 from .core.classes import ImageData, PerovStats
 from .filters import run_filters
+from .grains import find_grains
+from .fourier import create_masks
 
 
 def process(
