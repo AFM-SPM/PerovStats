@@ -31,9 +31,8 @@ freqsplit:
   cutoff_bounds: [0, 0.2] # Minimum and maximum cutoff points for frequency splitting.
   cutoff_step: 0.005 # Amount to increase the tested cutoff by for each iteration.
   min_rms: 9 # Minimum roughness mean score of a high-pass after splitting along the cutoff.
-mask:
-  threshold_function: mad # Options: std, mad.
-  threshold_bounds: [0, 4] # Minimum and maximum thresholds for masking.
+segmentation:
+  threshold_block_size: 1000
   smoothing:
     smooth_function: gaussian # Options: gaussian, difference_of_gaussians.
     sigma: 8
