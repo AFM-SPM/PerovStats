@@ -1,6 +1,6 @@
 import pandas as pd
 
-from perovstats.core.io import save_to_csv, save_config, create_plots
+from perovstats.core.io import save_to_csv, save_config
 
 
 def test_save_config(tmp_path):
@@ -19,7 +19,3 @@ def test_save_to_csv(tmp_path):
     save_to_csv(data, out)
 
     assert out.exists()
-
-
-def test_create_plots():
-    pass
