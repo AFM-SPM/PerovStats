@@ -7,7 +7,6 @@ import numpy as np
 from PIL import Image
 import pyfftw
 from matplotlib import pyplot as plt
-import skimage as ski
 
 from .core.classes import ImageData
 from .core.image_processing import extend_image, calculate_rms, normalise_array
@@ -250,31 +249,8 @@ def run_frequency_splitting(
         smooth_sigma = config["segmentation"]["smoothing"]["sigma"]
         if smooth_sigma:
             smooth_sigma = smooth_sigma / pixel_to_nm_scaling
-        smooth_func = config["segmentation"]["smoothing"]["smooth_function"]
-        if smooth_func == "gaussian":
-            smooth_func = ski.filters.gaussian
-        elif smooth_func == "difference_of_gaussians":
-            smooth_func = ski.filters.difference_of_gaussians
 
         logger.info(f"[{image_object.filename}] : *** Mask creation ***")
-
-        # threshold = find_threshold(
-        #     image_object.filename,
-        #     im,
-        #     pixel_to_nm_scaling=pixel_to_nm_scaling,
-        #     threshold_func=threshold_func,
-        #     smooth_sigma=smooth_sigma,
-        #     smooth_func=smooth_func,
-        #     area_threshold=area_threshold,
-        #     disk_radius=disk_radius,
-        #     min_threshold=min_threshold,
-        #     max_threshold=max_threshold,
-        # )
-        # if threshold is None:
-        #     return
-
-        # image_object.threshold = threshold
-
         logger.info(f"[{image_object.filename}] : Creating grain mask")
         np_mask = create_grain_mask(
             im,
