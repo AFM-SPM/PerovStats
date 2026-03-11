@@ -16,7 +16,7 @@ from .core.segmentation import (
     threshold_mad,
     threshold_mean_std,
     find_threshold,
-    create_grain_mask
+    create_grain_mask_2
 )
 from .smears import find_smear_areas
 
@@ -283,7 +283,7 @@ def run_frequency_splitting(
         image_object.threshold = threshold
 
         logger.info(f"[{image_object.filename}] : Creating grain mask")
-        np_mask = create_grain_mask(
+        np_mask = create_grain_mask_2(
             im,
             threshold_func=threshold_func,
             threshold=threshold,

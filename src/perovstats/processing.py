@@ -64,7 +64,6 @@ def process(
         find_grains(perovstats_object.config, image_object)
 
         logger.info(f"[{image_object.filename}] : *** Exporting data ***")
-
         # Save image and grain data to their own .csv file
         image_df = pd.DataFrame([image_object.to_dict()])
         grains_list = []
@@ -74,10 +73,8 @@ def process(
 
         output_filename = f"{output_dir}/{image_object.filename}/image_statistics.csv"
         save_to_csv(image_df, output_filename)
-
         output_filename = f"{output_dir}/{image_object.filename}/grain_statistics.csv"
         save_to_csv(grain_df, output_filename)
-
         # Save the config settings in a .yaml
         output_filename = Path(output_dir) / Path(image_object.filename) / "config.yaml"
         save_config(perovstats_object.config, output_filename)

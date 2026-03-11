@@ -50,6 +50,7 @@ def find_smear_areas(
 
     mask = stripe_score > threshold
 
+    # Remove smears not meeting minimum area requirements
     labeled, n = label(mask)
     for i in range(1, n+1):
         if np.sum(labeled == i) < min_size:
@@ -63,7 +64,13 @@ def find_smear_areas(
     final_mask = mask & low_pass_gradient_mask
     final_mask = binary_dilation(final_mask, structure=np.ones((3, 3)))
 
+    # Remove smears not meeting minimum area requirements
     labeled, n = label(final_mask)
+    for i in range(1, n+1):
+        if np.sum(labeled == i) < min_size:
+            final_mask[labeled == i] = 0
+
+    _, n = label(final_mask)
 
     logger.info(f"[{filename}] : Smear areas found: {n}")
     if n < MIN_SMEAR_AREAS:

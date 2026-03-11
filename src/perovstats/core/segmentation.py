@@ -122,13 +122,29 @@ def create_grain_mask(
     numpy.ndarray
         Mask array.
     """
-    smooth_sigma_scaled = smooth_sigma
-    area_threshold_scaled = area_threshold
-    disk_radius_scaled = disk_radius
 
-    im_ = smooth_func(im, sigma=smooth_sigma_scaled) if smooth_func else im
+    im_ = smooth_func(im, sigma=smooth_sigma) if smooth_func else im
     mask = im > threshold_func(im_, k=threshold)
-    mask = clean_mask(mask, area_threshold_scaled, disk_radius_scaled) if area_threshold else mask
+    mask = clean_mask(mask, area_threshold, disk_radius) if area_threshold else mask
+    selection = ski.util.invert(mask)
+    return ski.morphology.skeletonize(selection)
+
+
+def create_grain_mask_2(
+    im: np.ndarray,
+    threshold_func: Callable = threshold_mean_std,
+    threshold: float | None = None,
+    smooth_func: Callable | None = None,
+    smooth_sigma: float | None = None,
+    area_threshold: float | None = None,
+    disk_radius: float | None = None,
+) -> np.ndarray:
+    im_ = ski.filters.gaussian(im, sigma=smooth_sigma) # Smooth image
+    threshold_block_size = 55
+
+    local_thresh = ski.filters.threshold_local(im_, block_size=threshold_block_size) # Gets an array of local thresholds
+    mask = im_ > local_thresh
+    mask = clean_mask(mask, area_threshold, disk_radius) if area_threshold else mask
     selection = ski.util.invert(mask)
     return ski.morphology.skeletonize(selection)
 
