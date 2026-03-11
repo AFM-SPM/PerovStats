@@ -1,4 +1,5 @@
 from pathlib import Path
+from art import tprint
 
 from loguru import logger
 from topostats.io import LoadScans
@@ -85,4 +86,18 @@ def process(
             f"[{image_object.filename}] : Exported data and config to {Path(output_dir) / Path(image_object.filename)}",
         )
 
-    logger.success("Process complete.")
+    completion_message(perovstats_object)
+
+
+def completion_message(perovstats_object: PerovStats):
+    logger.success("Process completed successfully.")
+    print("----------------------------------------------------------------------------------------------------\n")
+    tprint("PerovStats", font="epic")
+    print(
+        f"----------------------------------------------------------------------------------------------------\n"
+        f"Base Directory                        : {perovstats_object.config['base_dir']}\n"
+        f"Output Directory                      : {perovstats_object.config['output_dir']}\n"
+        f"File Extension                        : {perovstats_object.config['file_ext']}\n"
+        f"Files Found                           : {len(perovstats_object.images)}\n"
+        f"----------------------------------------------------------------------------------------------------"
+    )
