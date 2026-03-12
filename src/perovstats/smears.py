@@ -33,14 +33,13 @@ def find_smear_areas(
     config = config["remove_smears"]
     threshold = config["smear_threshold"]
     smooth_sigma= config["smooth_sigma"]
-    min_size = config["min_smear_area"]
+    min_size = config["min_smear_size"]
+    min_smear_areas = config["min_smear_sections"]
     lowpass_threshold = config["lowpass_threshold"]
 
     high_pass = image_object.high_pass
     low_pass = image_object.low_pass
     filename = image_object.filename
-
-    MIN_SMEAR_AREAS = 6
 
     logger.info(f"[{filename}] : *** Finding smear areas ***")
 
@@ -50,6 +49,7 @@ def find_smear_areas(
     grad_x = np.abs(ndi.sobel(smooth, axis=1))
     grad_y = np.abs(ndi.sobel(smooth, axis=0))
 
+    # Value given to each pixel based on the difference between horizontal and vertical gradient
     stripe_score = grad_y / (grad_x + 1e-6) # 1e-6 prevents 0 division
 
     mask = stripe_score > threshold
@@ -63,7 +63,7 @@ def find_smear_areas(
     mask = binary_closing(mask, structure=np.ones((5, 10)))
 
     # Compare the mask calculated above with a mask selecting all pixels with a horizontal gradient over
-    # a given threshold, creating a new mask containing all overlapping pixels
+    # a given threshold in the low-pass image, creating a new mask containing all overlapping pixels
     low_pass_gradient_mask = get_horizontal_gradients(low_pass, threshold=lowpass_threshold)
     final_mask = mask & low_pass_gradient_mask
     final_mask = binary_dilation(final_mask, structure=np.ones((3, 3)))
@@ -77,7 +77,7 @@ def find_smear_areas(
     _, n = label(final_mask)
 
     logger.info(f"[{filename}] : Smear areas found: {n}")
-    if n < MIN_SMEAR_AREAS:
+    if n < min_smear_areas:
         logger.info(f"[{filename}] : Minimum number of smear areas not met, skipping smear removal.")
         final_mask = np.zeros_like(final_mask)
         smears_removed = False
