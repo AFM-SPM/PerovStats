@@ -4,15 +4,13 @@ from perovstats.smears import find_smear_areas, clean_smears
 
 
 def test_find_smear_areas(
-    dummy_high_pass,
-    dummy_low_pass,
-    dummy_smear_mask,
-    default_config
+    default_config,
+    dummy_image_data_object,
+    dummy_smear_mask
 ):
-    config = default_config["remove_smears"]
-    filename = "dummy_filename"
-    smear_mask, _ = find_smear_areas(dummy_high_pass, dummy_low_pass, config, filename)
+    find_smear_areas(default_config, dummy_image_data_object)
 
+    smear_mask = dummy_image_data_object.smears
     assert np.array_equal(smear_mask, dummy_smear_mask)
 
 

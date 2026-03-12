@@ -53,7 +53,7 @@ def test_split_frequencies(image, dummy_perovstats_object: PerovStats):
 
 def test_perform_fourier(dummy_original_image: np.ndarray):
     """Test splitting an image between background and foreground patterns."""
-    high_pass, low_pass = perform_fourier(dummy_original_image, cutoff=1, edge_width=0.03)
+    high_pass, low_pass = perform_fourier(dummy_original_image, cutoff=1.0, edge_width=0.03)
 
     assert high_pass.shape == dummy_original_image.shape
     assert low_pass.shape == dummy_original_image.shape

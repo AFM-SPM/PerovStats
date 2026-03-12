@@ -1,9 +1,9 @@
 import numpy as np
-import pytest
 
 from perovstats.core.segmentation import (
     clean_mask,
     create_grain_mask,
+    apply_cutoff,
     create_frequency_mask,
     tidy_border
 )
@@ -23,80 +23,48 @@ def test_clean_mask(dummy_mask: np.ndarray) -> None:
     assert x.dtype == np.dtype(bool)
 
 
-# @pytest.mark.parametrize(
-#         (
-#             "filename",
-#             "threshold_block_size",
-#             "smooth_sigma",
-#             "area_threshold",
-#             "disk_radius",
-#             "pixel_to_nm_scaling",
-#             "expected"
-#         ),
-#         [
-#             pytest.param(
-#                 "dummy_filename",
-#                 55,
-#                 8,
-#                 10000,
-#                 40,
-#                 19.53125,
-#                 1.92,
-#                 id="mad thresholding"
-#             )
-#         ]
-# )
-# def test_find_threshold(
-#     filename: str,
-#     dummy_high_pass,
-#     threshold_block_size: int,
-#     smooth_sigma: float,
-#     area_threshold: float,
-#     disk_radius: float,
-#     pixel_to_nm_scaling: float,
-#     expected: float,
-# ):
-#     area_threshold = area_threshold / (pixel_to_nm_scaling**2)
-#     disk_radius = disk_radius / pixel_to_nm_scaling
-
-#     threshold = find_threshold(
-#         filename,
-#         dummy_high_pass,
-#         threshold_block_size=threshold_block_size
-#         pixel_to_nm_scaling,
-#         smooth_sigma,
-#         area_threshold,
-#         disk_radius,
-#     )
-
-#     assert threshold == expected
-
-
-@pytest.mark.parametrize(
-    ("shape", "cutoff", "width"),
-    [
-        (
-            (512, 512),
-            0.5,
-            0,
-        ),
-        (
-            (256, 512),
-            0.5,
-            0,
-        ),
-        (
-            (512, 512),
-            0.5,
-            0.1,
-        ),
-    ],
-)
-def test_create_frequency_mask(shape: tuple, cutoff: float, width: float) -> None:
+def test_apply_cutoff_hard_threshold() -> None:
     """Test creating a frequency mask."""
-    x = create_frequency_mask(shape, cutoff=cutoff, edge_width=width)
+    f_grid = np.linspace(0, 1, 100).reshape(10, 10)
+    cutoff = 0.5
+    edge_width = 0
+    mask = apply_cutoff(f_grid, cutoff=cutoff, edge_width=edge_width)
 
-    assert x.shape == shape
+    assert mask.shape == (10, 10)
+    assert np.all(np.isin(mask, [0,1]))
+    assert mask[f_grid < cutoff].max() == 0
+    assert mask[f_grid >= cutoff].min() == 1
+
+
+def test_apply_cutoff_soft_threshold() -> None:
+    """Test creating a frequency mask."""
+    f_grid = np.linspace(0, 1, 100).reshape(10, 10)
+    cutoff = 0.5
+    edge_width = 0.1
+    mask = apply_cutoff(f_grid, cutoff=cutoff, edge_width=edge_width)
+
+    assert mask.shape == (10, 10)
+    assert mask.min() >= 0
+    assert mask.max() <= 1
+    assert np.any((mask > 0) & (mask < 1))
+    # Find midpoint and ensure the value is ~0.5
+    idx = np.unravel_index(np.argmin(np.abs(f_grid - cutoff)), f_grid.shape)
+    assert np.isclose(mask[idx], 0.5, atol=0.1)
+
+
+def test_create_frequency_mask(dummy_original_image) -> None:
+    shape = dummy_original_image.shape
+
+    freq_grid = create_frequency_mask(dummy_original_image)
+
+    assert freq_grid.shape == shape
+    assert freq_grid[0,0] == 0.0
+    assert np.isclose(freq_grid[0,1], freq_grid[0,-1])
+    assert np.isclose(freq_grid[1,0], freq_grid[-1,0])
+    half_shape = (round(shape[0]/2), round(shape[1]/2))
+    assert np.isclose(freq_grid[0,half_shape[1]], 1.0)
+    assert np.isclose(freq_grid[half_shape[0],0], 1.0)
+    assert np.isclose(freq_grid[half_shape[0],half_shape[1]], np.sqrt(2))
 
 
 def test_tidy_borders(dummy_mask: np.ndarray):

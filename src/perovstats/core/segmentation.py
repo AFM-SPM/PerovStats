@@ -73,7 +73,7 @@ def create_grain_mask(
     return ski.morphology.skeletonize(selection)
 
 
-def create_frequency_mask(
+def apply_cutoff(
     f_grid,
     cutoff: float,
     edge_width: float = 0,
@@ -100,7 +100,7 @@ def create_frequency_mask(
     np.ndarray
         Frequency mask.
     """
-    if edge_width:
+    if edge_width and edge_width > 0:
         return 0.5 * (erf((f_grid - cutoff) / edge_width) + 1)
     else:
         return (f_grid >= cutoff).astype(np.float64)
@@ -134,3 +134,16 @@ def tidy_border(mask: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
             mask[mask_labelled == region.label] = 0
 
     return mask
+
+
+def create_frequency_mask(image: np.ndarray) -> np.ndarray:
+    # Create frequency mask grid
+    yres, xres = image.shape
+    xr = np.arange(xres)
+    yr = np.arange(yres)
+    fx = 2 * np.fmin(xr, xres - xr) / xres
+    fy = 2 * np.fmin(yr, yres - yr) / yres
+
+    # Full coordinate arrays
+    xx, yy = np.meshgrid(fx, fy)
+    return np.sqrt(xx**2 + yy**2)

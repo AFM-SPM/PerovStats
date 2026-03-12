@@ -11,8 +11,9 @@ from matplotlib import pyplot as plt
 from .core.classes import ImageData
 from .core.image_processing import extend_image, normalise_array
 from .core.segmentation import (
-    create_frequency_mask,
-    create_grain_mask
+    apply_cutoff,
+    create_grain_mask,
+    create_frequency_mask
 )
 
 
@@ -156,8 +157,10 @@ def perform_fourier(
     fft_input[:] = extended_image
     dft = fft_object()
 
+    freq_grid = create_frequency_mask(extended_image)
+
     # Create mask to filter to specified frequencies
-    mask = create_frequency_mask(extended_image.shape, cutoff, edge_width=edge_width)
+    mask = apply_cutoff(freq_grid, cutoff, edge_width=edge_width)
 
     # Mask the DFT output
     dft = dft * mask
@@ -230,19 +233,10 @@ def find_cutoff(
 
     min_rms = min_rms + (pixel_to_nm_scaling * 0.1)
 
-    # Create frequency mask grid
-    yres, xres = extended_image.shape
-    xr = np.arange(xres)
-    yr = np.arange(yres)
-    fx = 2 * np.fmin(xr, xres - xr) / xres
-    fy = 2 * np.fmin(yr, yres - yr) / yres
-
-    # Full coordinate arrays
-    xx, yy = np.meshgrid(fx, fy)
-    freq_grid = np.sqrt(xx**2 + yy**2)
+    freq_grid = create_frequency_mask(extended_image)
 
     for cutoff in np.arange(min_cutoff, max_cutoff, cutoff_step):
-        mask = create_frequency_mask(freq_grid, cutoff, edge_width=edge_width)
+        mask = apply_cutoff(freq_grid, cutoff, edge_width=edge_width)
         masked_dft = full_dft * mask
 
         sum_sq_magnitudes = np.sum(np.abs(masked_dft)**2)
