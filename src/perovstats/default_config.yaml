@@ -34,13 +34,14 @@ freqsplit:
 segmentation:
   smoothing:
     sigma: 8
-  threshold_block_size: 1000 # Size of each block for local thresholding.
+  threshold_block_size: 800 # Size of each block for local thresholding. Lower values increase segmentation sensitivity.
   cleaning:
     area_threshold: 10000 # in nm2.
     disk_radius_factor: 40
 remove_smears:
     run: true
     smooth_sigma: 1 # How much to smooth the high pass image before comparing gradients
-    smear_threshold: 1.9 # Minimum value for y gradient / x gradient in the high pass image, meaning possible smear
-    min_smear_area: 175 # in px^2, areas under this value are removed and ignored
+    smear_threshold: 1.8 # Minimum value for y gradient / x gradient in the high pass image, meaning possible smear
+    min_smear_size: 175 # in px^2, areas under this value are removed and ignored
+    min_smear_sections: 6 # Minimum number of identified smear sections to not discount smear removal. If less they are considered to be in error.
     lowpass_threshold: 95 # Minimum horizontal gradient in the low pass image to be marked
