@@ -135,7 +135,7 @@ def get_arg(key: str, args: Namespace, config: dict, default: str | None = None)
     return arg
 
 
-def setup_logger():
+def setup_logger() -> None:
     """
     Set up loguru, defining the output directory and filename and
     define the syntax for log messages.
@@ -150,6 +150,15 @@ def setup_logger():
 
 @logger.catch
 def main(args: list[str] | None = None) -> None:
+    """
+    Parse input args, load images from the selected directory and call the process()
+    function to start the program.
+
+    Parameters
+    ----------
+    args : list[str]
+        List of arguments given in the command line when running PerovStats.
+    """
     setup_logger()
 
     if args is None:
@@ -180,8 +189,7 @@ def main(args: list[str] | None = None) -> None:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    load_config = config["loading"]
-    load_config["channel"] = get_arg("channel", args, load_config, "Height")
+    # load_config = config["loading"]
+    config["loading"]["channel"] = get_arg("channel", args, config["loading"], "Height")
 
-
-    process(img_files, load_config, config, output_dir)
+    process(img_files, config, output_dir)

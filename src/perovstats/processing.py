@@ -10,24 +10,30 @@ from .core.classes import ImageData, PerovStats
 from .filters import run_filters
 from .grains import find_grains
 from .fourier import run_frequency_splitting
+from .smears import find_smear_areas
 
 
 def process(
         img_files,
-        load_config,
         config,
         output_dir
     ) -> None:
     """
-    Entrypoint for perovstats, calls main functions in the process.
+    Main method for running processes in PerovStats, calls functions
+    for each section in turn and then saves final data.
 
     Parameters
     ----------
-    args : list[str], optional
-        Arguments.
+    img_files : List[Path]
+        List of paths to the image files found for processing.
+    config : dict[str, any]
+        All configuration options for running PerovStats.
+    output_dir : Path
+        Filepath of the directory to save images/ files to.
     """
 
     # Load scans
+    load_config = config["loading"]
     loadscans = LoadScans(img_files, **load_config)
     try:
         loadscans.get_data()
@@ -49,7 +55,7 @@ def process(
 
     for image_object in perovstats_object.images:
         logger.info("----------------------------------------------------------")
-        logger.info(f"processing {image_object.filename}")
+        logger.info(f"Processing {image_object.filename}")
         logger.info("----------------------------------------------------------")
         logger.debug(f"[{image_object.filename}] : Image dimensions: {image_object.image_original.shape}")
         logger.debug(f"[{image_object.filename}] : pixel_to_nm_scaling: {image_object.pixel_to_nm_scaling}")
@@ -59,6 +65,9 @@ def process(
 
         # Apply fourier analysis and create binary mask of resultant high-pass image
         run_frequency_splitting(perovstats_object.config, image_object)
+
+        # Find smear areas to be ignored/ removed
+        find_smear_areas(perovstats_object.config, image_object)
 
         # Find grains from mask
         find_grains(perovstats_object.config, image_object)
@@ -86,7 +95,15 @@ def process(
     completion_message(perovstats_object)
 
 
-def completion_message(perovstats_object: PerovStats):
+def completion_message(perovstats_object: PerovStats) -> None:
+    """
+    Message to be printed at the end of a successful PerovStats run, includes basic config info for the user.
+
+    Parameters
+    ----------
+    perovstats_object : PerovStats
+        The main PerovStats class object containing all config options and input/ processed data.
+    """
     logger.success("Process completed successfully.")
     print("----------------------------------------------------------------------------------------------------\n")
     tprint("PerovStats", font="epic")

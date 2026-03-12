@@ -6,14 +6,13 @@ from skimage import morphology
 from skimage.measure import regionprops
 
 from .core.image_processing import get_horizontal_gradients
+from .core.classes import ImageData
 
 
 def find_smear_areas(
-        high_pass: np.ndarray,
-        low_pass: np.ndarray,
         config: dict[str, any],
-        filename: str,
-    ):
+        image_object: ImageData,
+    ) -> None:
     """
     Take a high-passed array and for each pixel compare its gradient difference on each axis
     with the horizontal axis' gradient for the low-passed image's corresponding pixel, pixels
@@ -31,10 +30,15 @@ def find_smear_areas(
     filename: str
         Filename currently being processed, used for logging info.
     """
+    config = config["remove_smears"]
     threshold = config["smear_threshold"]
     smooth_sigma= config["smooth_sigma"]
     min_size = config["min_smear_area"]
     lowpass_threshold = config["lowpass_threshold"]
+
+    high_pass = image_object.high_pass
+    low_pass = image_object.low_pass
+    filename = image_object.filename
 
     MIN_SMEAR_AREAS = 6
 
@@ -75,10 +79,13 @@ def find_smear_areas(
     logger.info(f"[{filename}] : Smear areas found: {n}")
     if n < MIN_SMEAR_AREAS:
         logger.info(f"[{filename}] : Minimum number of smear areas not met, skipping smear removal.")
-        empty_mask = np.zeros_like(final_mask)
-        return empty_mask, False
+        final_mask = np.zeros_like(final_mask)
+        smears_removed = False
+    else:
+        smears_removed = True
 
-    return final_mask, True
+    image_object.smears = final_mask
+    image_object.smears_removed = smears_removed
 
 
 def clean_smears(mask: np.ndarray, smear_mask: np.ndarray) -> np.ndarray:

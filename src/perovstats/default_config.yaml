@@ -34,7 +34,7 @@ freqsplit:
 segmentation:
   smoothing:
     sigma: 8
-  threshold_block_size: 1000
+  threshold_block_size: 1000 # Size of each block for local thresholding.
   cleaning:
     area_threshold: 10000 # in nm2.
     disk_radius_factor: 40
