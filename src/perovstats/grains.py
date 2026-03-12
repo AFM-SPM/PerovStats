@@ -24,11 +24,6 @@ def find_grains(
     ----------
     perovstats_object : PerovStats
         Class object containing all data from the process.
-
-    Returns
-    -------
-    parovstats_object : PerovStats
-        The updated class object.
     """
     logger.info(f"[{image_object.filename}] : *** Grain finding ***")
 

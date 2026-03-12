@@ -9,13 +9,11 @@ import pyfftw
 from matplotlib import pyplot as plt
 
 from .core.classes import ImageData
-from .core.image_processing import extend_image, calculate_rms, normalise_array
+from .core.image_processing import extend_image, normalise_array
 from .core.segmentation import (
     create_frequency_mask,
     create_grain_mask
 )
-from .smears import find_smear_areas
-
 
 
 def split_frequencies(
@@ -27,8 +25,11 @@ def split_frequencies(
 
     Parameters
     ----------
-    args : list[str], optional
-        Arguments.
+    config : dict[str, any]
+        Dictionary of all configuration options.
+    image_object: ImageData
+        Class object of ImageData, containing all data connected
+        to the current image.
 
     Raises
     ------
@@ -55,6 +56,7 @@ def split_frequencies(
         pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
 
         logger.info(f"[{filename}] : *** Frequency splitting ***")
+
         cutoff = find_cutoff(
             image_object,
             edge_width,
@@ -181,22 +183,70 @@ def find_cutoff(
         cutoff_step: float,
         min_rms: float,
         pixel_to_nm_scaling: float,
-    ) -> float:
-    """Iterate through possible cutoff points to find one with the smallest RMS over a given value."""
+) -> float:
+    """
+    Find an ideal cutoff for performing a fourier transform on
+    the current image.
+
+    Parameters
+    ----------
+    image_object : ImageData
+        Class object of the current image containing all data
+        connected to it.
+    edge_width : float
+        Edge width, expressed as a relative fraction of the Nyquist
+        frequency.  If zero, the filter has sharp edges.  For non-zero
+        values the transition has the shape of the error function,
+        with the specified width.
+    min_cutoff : float
+        Starting cutoff when looping through to find the ideal value.
+    max_cutoff : float
+        Finishing cutoff when looping through to find the ideal value.
+    cutoff_step : float
+        Amount to increase tested cutoff by on each test.
+    min_rms : float
+        RMS threshold for when checking cutoffs.
+    pixel_to_nm_scaling : float
+        Ratio of pixels:nm used for scaling parameters to ensure
+        consistency.
+
+    Returns
+    -------
+    float
+        The best cutoff found.
+    """
     image = image_object.image_original
     best_cutoff = None
     min_found_rms = float('inf')
-    cutoff_values = []
-    rms_values = []
-    # Adjust the minimum RMS based on the image scaling
+
+    extended_image, _ = extend_image(image, method=cv2.BORDER_REFLECT)
+    fft_input = pyfftw.empty_aligned(extended_image.shape, dtype="complex128")
+    fft_object = pyfftw.builders.fft2(fft_input)
+
+    fft_input[:] = extended_image
+    full_dft = fft_object()
+
+    n_pixels = full_dft.size
+
     min_rms = min_rms + (pixel_to_nm_scaling * 0.1)
 
-    for cutoff in np.arange(min_cutoff, max_cutoff, cutoff_step):
-        high_pass, _ = perform_fourier(image, cutoff, edge_width)
-        current_rms = calculate_rms(high_pass)
+    # Create frequency mask grid
+    yres, xres = extended_image.shape
+    xr = np.arange(xres)
+    yr = np.arange(yres)
+    fx = 2 * np.fmin(xr, xres - xr) / xres
+    fy = 2 * np.fmin(yr, yres - yr) / yres
 
-        cutoff_values.append(cutoff)
-        rms_values.append(current_rms)
+    # Full coordinate arrays
+    xx, yy = np.meshgrid(fx, fy)
+    freq_grid = np.sqrt(xx**2 + yy**2)
+
+    for cutoff in np.arange(min_cutoff, max_cutoff, cutoff_step):
+        mask = create_frequency_mask(freq_grid, cutoff, edge_width=edge_width)
+        masked_dft = full_dft * mask
+
+        sum_sq_magnitudes = np.sum(np.abs(masked_dft)**2)
+        current_rms = np.sqrt(sum_sq_magnitudes / (n_pixels**2))
 
         if current_rms > min_rms and current_rms < min_found_rms:
             min_found_rms = current_rms
@@ -213,6 +263,17 @@ def run_frequency_splitting(
     config: dict[str, any],
     image_object: ImageData
 ) -> None:
+    """
+    Main method for splitting an image by frequency.
+
+    Parameters
+    ----------
+    config: dict[str, any]
+        Dictionary of configuration settings
+    image_object
+        Class object of the current image containing all relevant
+        data.
+    """
     split_frequencies(config, image_object)
 
     output_dir = Path(config["output_dir"])
@@ -222,16 +283,6 @@ def run_frequency_splitting(
         fname = image_object.filename
         im = image_object.high_pass
         pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
-
-        # Remove/ ignore smears in high_pass image
-        smear_config = config["remove_smears"]
-        if smear_config["run"]:
-            image_object.smears, smears_removed = find_smear_areas(image_object.high_pass, image_object.low_pass, smear_config, fname)
-            image_object.smears_removed = smears_removed
-
-            rgb_highpass = np.stack((image_object.high_pass,)*3, axis=-1)
-            rgb_highpass = normalise_array(rgb_highpass)
-            rgb_highpass[image_object.smears > 0] = [1, 0, 0]
 
         # Scale threshold block size with image scaling and round to nearest odd integer
         threshold_block_size = config["segmentation"]["threshold_block_size"] / pixel_to_nm_scaling
@@ -265,7 +316,7 @@ def run_frequency_splitting(
         # Convert to image format and save
         plt.imsave(output_dir / fname / "images" / f"{fname}_mask.jpg", np_mask)
 
-        # Save high-pass with mask skeleton overlay
+        # Save high-pass with mask skeleton
         high_pass = image_object.high_pass
         rgb_highpass = np.stack((high_pass,)*3, axis=-1)
         rgb_highpass = normalise_array(rgb_highpass)
