@@ -1,5 +1,6 @@
 from pathlib import Path
 from art import tprint
+import time
 
 from loguru import logger
 from topostats.io import LoadScans
@@ -31,6 +32,7 @@ def process(
     output_dir : Path
         Filepath of the directory to save images/ files to.
     """
+    time_start = time.perf_counter()
 
     # Load scans
     load_config = config["loading"]
@@ -51,11 +53,12 @@ def process(
             image_flattened=None)
         perovstats_object.images.append(image_data)
 
+    logger.info("----------------------------------------------------------")
     logger.info(f"Loaded {len(perovstats_object.images)} images")
 
-    for image_object in perovstats_object.images:
+    for idx, image_object in enumerate(perovstats_object.images):
         logger.info("----------------------------------------------------------")
-        logger.info(f"Processing {image_object.filename}")
+        logger.info(f"Processing {image_object.filename} ({idx+1}/{len(perovstats_object.images)})")
         logger.info("----------------------------------------------------------")
         logger.debug(f"[{image_object.filename}] : Image dimensions: {image_object.image_original.shape}")
         logger.debug(f"[{image_object.filename}] : pixel_to_nm_scaling: {image_object.pixel_to_nm_scaling}")
@@ -92,10 +95,13 @@ def process(
             f"[{image_object.filename}] : Exported data and config to {Path(output_dir) / Path(image_object.filename)}",
         )
 
-    completion_message(perovstats_object)
+    time_end = time.perf_counter()
+    time_taken = format_time(time_end - time_start)
+    time_per_image = format_time((time_end - time_start) / len(perovstats_object.images))
+    completion_message(perovstats_object, time_taken, time_per_image)
 
 
-def completion_message(perovstats_object: PerovStats) -> None:
+def completion_message(perovstats_object: PerovStats, time_taken: str, time_per_image: str) -> None:
     """
     Message to be printed at the end of a successful PerovStats run, includes basic config info for the user.
 
@@ -113,5 +119,18 @@ def completion_message(perovstats_object: PerovStats) -> None:
         f"Output Directory                      : {perovstats_object.config['output_dir']}\n"
         f"File Extension                        : {perovstats_object.config['file_ext']}\n"
         f"Files Found                           : {len(perovstats_object.images)}\n"
+        f"Time Taken                            : {time_taken} (~{time_per_image}/image)\n"
         f"----------------------------------------------------------------------------------------------------"
     )
+
+
+def format_time(seconds: float) -> str:
+    if seconds < 60:
+        return f"{seconds:.2f}s"
+
+    minutes, seconds = divmod(seconds, 60)
+    if minutes < 60:
+        return f"{int(minutes)}m {int(seconds)}s"
+
+    hours, minutes = divmod(minutes, 60)
+    return f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
