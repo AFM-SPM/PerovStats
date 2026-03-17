@@ -22,8 +22,11 @@ def find_grains(
 
     Parameters
     ----------
-    perovstats_object : PerovStats
-        Class object containing all data from the process.
+    config : dict[str, any]
+        A dictionary of config options inputted at the start of the program.
+    image_object : ImageData
+        Dataclass reference contianing data and stats on the image currently
+        being processed.
     """
     logger.info(f"[{image_object.filename}] : *** Grain finding ***")
 
@@ -127,6 +130,19 @@ def find_grains(
 
 
 def find_median_grain_area(values: list[float]) -> float:
+    """
+    Median value is found from an inputted list of values
+
+    Parameters
+    ----------
+    values : list[float]
+        List of areas of all the grains in an image.
+
+    Returns
+    -------
+    float
+        The median value from the given list.
+    """
     values = sorted(values)
     count = len(values)
     mid = count // 2
@@ -138,10 +154,36 @@ def find_median_grain_area(values: list[float]) -> float:
 
 
 def find_mean_grain_area(values: list[float]) -> float:
+    """
+    Mean value is found from an inputted list of values
+
+    Parameters
+    ----------
+    values : list[float]
+        List of areas of all the grains in an image.
+
+    Returns
+    -------
+    float
+        The mean value from the given list.
+    """
     return sum(values) / len(values)
 
 
 def find_mode_grain_area(values: list[float]) -> float:
+    """
+    Mode value is found from an inputted list of values
+
+    Parameters
+    ----------
+    values : list[float]
+        List of areas of all the grains in an image.
+
+    Returns
+    -------
+    float
+        The mode value from the given list.
+    """
     counts = {}
     for v in values:
         counts[v] = counts.get(v, 0) + 1
@@ -151,7 +193,21 @@ def find_mode_grain_area(values: list[float]) -> float:
 def find_circularity_rating(grain_area: float, grain_perimeter: float) -> float:
     """
     Take a grain mask and use the isoperimetric ratio to give it a rating (0 - 1)
-    for how circular it is.
+    for how circular it is. 0 would be a straight line and 1 would be a perfect
+    circle.
+    This uses the isoperimetric quotient, which uses the idea that a circle is the
+    shape which has the maximum possible area for a given perimeter.
+
+    Parameters
+    ----------
+    grain_area : float
+        The area of the given grain.
+    grain_perimeter : float
+        The perimeter of the given grain.
+    Returns
+    -------
+    float
+        A value between 0-1 rating the inputted grain shape on how circular it is.
     """
     return (4 * np.pi * grain_area) / (grain_perimeter * grain_perimeter)
 

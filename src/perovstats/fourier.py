@@ -185,6 +185,10 @@ def find_cutoff(
     """
     Find an ideal cutoff for performing a fourier transform on
     the current image.
+    A frequency grid is created and then multiple cutoffs are tested
+    between the cutoff bounds defined in the config. The cutoff with the
+    lowest rms value over the minimum rms defined in config is then chosen
+    for the rest of the process.
 
     Parameters
     ----------

@@ -113,6 +113,11 @@ def completion_message(perovstats_object: PerovStats, time_taken: str, time_per_
     ----------
     perovstats_object : PerovStats
         The main PerovStats class object containing all config options and input/ processed data.
+    time_taken : str
+        The formatted total time taken on processing all given images.
+    time_per_image : str
+        The formatted average time taken per image during the process. This is required as a parameter
+        as it must be calculated before the total time is formatted.
     """
     logger.success("Process completed successfully.")
     print("----------------------------------------------------------------------------------------------------\n")

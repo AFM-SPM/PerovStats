@@ -6,7 +6,7 @@ import numpy as np
 @dataclass
 class Grain:
     """
-    Class for storing individual grains.
+    Dataclass for storing data on individual grains in an image.
 
     Parameters
     ----------
@@ -39,7 +39,8 @@ class Grain:
 @dataclass
 class ImageData:
     """
-    Class for storing overall data for a processed image.
+    Dataclass for storing overall data for a processed image,
+    including average stats for the grains within the image.
 
     Parameters
     ----------
@@ -137,7 +138,8 @@ class ImageData:
 @dataclass
 class PerovStats:
     """
-    Class for all data collected in a run of PerovStats.
+    Class for all data collected in a run of PerovStats consisting of
+    the input config for access during the process and data on each image processed.
 
     Parameters
     ----------
