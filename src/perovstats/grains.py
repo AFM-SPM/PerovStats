@@ -45,11 +45,7 @@ def find_grains(
 
     # Remove grains in/ touching smears
     if config["remove_smears"]["run"]:
-        labelled_mask, area_removed = clean_smears(labelled_mask, image_object.smears)
-    else:
-        area_removed = 0
-    smear_percent = round((area_removed / (mask.shape[0] * mask.shape[1])) * 100, 3)
-    image_object.smear_percent = smear_percent
+        labelled_mask = clean_smears(labelled_mask, image_object.smears)
 
     labelled_mask_rgb = label2rgb(labelled_mask, bg_label=0, saturation=0)
 
