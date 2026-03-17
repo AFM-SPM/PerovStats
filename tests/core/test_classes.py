@@ -10,7 +10,8 @@ from perovstats.core.classes import Grain, ImageData
             {
                 "grain_id": 0,
                 "grain_area": 10.2,
-                "grain_circularity": 0.6
+                "grain_circularity": 0.6,
+                "grain_volume": None,
             }
         ),
     ]
