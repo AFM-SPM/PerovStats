@@ -21,7 +21,7 @@ def test_segment_image(dummy_perovstats_object: PerovStats):
 
 def test_create_grain_mask(dummy_original_image: np.ndarray) -> None:
     """Test creating a grain mask."""
-    x = create_grain_mask(dummy_original_image, threshold_block_size=55, smooth_sigma=8, area_threshold=10000, disk_radius=40)
+    x = create_grain_mask(dummy_original_image, threshold_block_size=55, threshold_offset=0, smooth_sigma=8, area_threshold=10000, disk_radius=40)
     assert x.shape == dummy_original_image.shape
     assert x.dtype == np.dtype(bool)
 
