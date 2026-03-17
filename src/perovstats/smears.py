@@ -14,7 +14,11 @@ def find_smear_areas(
         image_object: ImageData,
     ) -> None:
     """
-    Take a high-passed array and for each pixel compare its gradient difference on each axis
+    Smears are errors in an AFM scan image and should be ignored/ removed from the data.
+    They are characteristed by areas of horizontal lines, most visible in the high-passed
+    version of an image and occur when the gradient of the overall material is too high at
+    a given point.
+    This method takes a high-passed array and for each pixel compares its gradient difference on each axis
     with the horizontal axis' gradient for the low-passed image's corresponding pixel, pixels
     over given thresholds for both masks are marked as smear areas.
 
@@ -90,6 +94,7 @@ def find_smear_areas(
     else:
         image_object.smears = np.zeros_like(image_object.high_pass)
         image_object.smears_removed = False
+
 
 def clean_smears(mask: np.ndarray, smear_mask: np.ndarray) -> np.ndarray:
     """

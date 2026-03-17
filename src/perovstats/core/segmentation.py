@@ -19,7 +19,8 @@ def segment_image(
     image_object: ImageData
 ) -> None:
     """
-    Main method for splitting an image by frequency.
+    Create the segmentation mask for an image, ready to be analysed for grain finding.
+    This method also saves iamges of the mask.
 
     Parameters
     ----------
@@ -77,7 +78,6 @@ def segment_image(
         rgb_highpass = normalise_array(rgb_highpass)
         rgb_highpass[np_mask > 0] = [1, 0, 0]
         plt.imsave(output_dir / fname / "images" / f"{fname}_mask_overlay.jpg", rgb_highpass)
-
 
 
 def clean_mask(
@@ -209,6 +209,22 @@ def tidy_border(mask: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
 
 
 def create_frequency_mask(image: np.ndarray) -> np.ndarray:
+    """
+    Create a 2D grid of normalised spatial frequencies for an image.
+    Calculate the distance of each pixel from the zero frequency component
+    in the Fourier domain.
+
+    Parameters
+    ----------
+    image :np.ndarray
+        2D image to be analysed.
+
+    Returns
+    -------
+    np.ndarray
+        A 2D arrya of the same shape as the input image containing the radial
+        normalised frequencies of sqrt(fx^2 + fy^2).
+    """
     # Create frequency mask grid
     yres, xres = image.shape
     xr = np.arange(xres)

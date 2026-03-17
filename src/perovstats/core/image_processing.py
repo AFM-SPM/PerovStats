@@ -4,7 +4,20 @@ import cv2
 
 
 def normalise_array(arr: np.ndarray) -> np.ndarray:
-    """Normalise an array of any size and shape to 0-1."""
+    """
+    Normalise an array of any size and shape to 0-1. Outliers are also
+    ignored (lowest and highest 0.05%).
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        The array (of any shape) the be normalised.
+
+    Returns
+    -------
+    np.ndarray
+        Normalised array with the same shape as the input array.
+    """
     # Ignore outlier extremes
     v_min, v_max = np.percentile(arr, [0.05, 99.95])
 
@@ -20,6 +33,18 @@ def get_horizontal_gradients(
     """
     Use the sobel formula to assign a gradient to each pixel in an array
     for the horizontal axis.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        The image to analyse.
+    threshold : float
+        The minimum gradient of a pixel to add it to the mask.
+
+    Returns
+    -------
+    np.ndarray
+        Binary mask of all pixels over the horizontal gradient threshold.
     """
     grad_x = ndi.sobel(image, axis=1)
     mask = grad_x > threshold
@@ -28,7 +53,20 @@ def get_horizontal_gradients(
 
 
 def calculate_rms(image: np.ndarray) -> float:
-    """Find the RMS of an array."""
+    """
+    Find the RMS (root mean square) of an array.
+    This dictates how rough a surface/ image is.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        The 2d image to be analysed
+
+    Returns
+    -------
+    float
+        The RMS value of the inputted array.
+    """
     return np.sqrt(np.mean(image**2))
 
 
@@ -37,7 +75,7 @@ def extend_image(
     method: int = cv2.BORDER_REFLECT,
 ) -> tuple[np.ndarray, dict]:
     """
-    Extend image by specified method.
+    Extend image on all sides by specified method.
 
     Parameters
     ----------
