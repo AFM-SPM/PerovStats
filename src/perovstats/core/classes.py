@@ -17,18 +17,22 @@ class Grain:
     grain_area : float | None
         Area of the grain in nm^2.
     grain_circularity_rating : float | None
-        Unifinished var.
+        A rating of 0-1 giving how close the shape of the grain is to a circle.
+    grain_volume: float | None
+        Volume of the grain in nm^3
     """
     grain_id: int
     grain_mask: np.ndarray | None = None
     grain_area: float | None = None
     grain_circularity_rating: float | None = None
+    grain_volume: float | None = None
 
     def to_dict(self) -> dict:
         return {
             "grain_id": self.grain_id,
             "grain_area": self.grain_area,
             "grain_circularity": self.grain_circularity_rating,
+            "grain_volume": self.grain_volume
         }
 
 

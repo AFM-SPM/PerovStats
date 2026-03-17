@@ -30,6 +30,7 @@ from argparse import RawDescriptionHelpFormatter
 from loguru import logger
 from yaml import safe_load
 
+from .gui.app import PerovStatsApp
 from .processing import process
 
 
@@ -192,4 +193,8 @@ def main(args: list[str] | None = None) -> None:
     # load_config = config["loading"]
     config["loading"]["channel"] = get_arg("channel", args, config["loading"], "Height")
 
-    process(img_files, config, output_dir)
+    if config["gui"]["run"]:
+        app = PerovStatsApp(process, img_files, config, output_dir)
+        app.mainloop()
+    else:
+        process(img_files, config, output_dir)
