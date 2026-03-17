@@ -98,7 +98,17 @@ def find_grains(
     image_object.grains = {}
     for i, grain_area in enumerate(mask_areas):
         grain_circularity = find_circularity_rating(grain_area, mask_perimeters[i])
-        image_object.grains[i] = Grain(grain_id=i, grain_mask=mask_images[i], grain_area=grain_area, grain_circularity_rating=grain_circularity)
+        # grain_volume = find_grain_volume(mask, mask_regionprops[i], labelled_mask, mask_images[i], pixel_to_nm_scaling)
+        image_object.grains[i] = Grain(
+            grain_id=i,
+            # centre_x
+            # centre_y
+            # is_intersected
+            grain_mask=mask_images[i],
+            grain_area=grain_area,
+            grain_circularity_rating=grain_circularity,
+            # grain_volume=grain_volume
+        )
 
     logger.info(
         f"[{filename}] : Obtained {image_object.num_grains} grains",
@@ -144,3 +154,11 @@ def find_circularity_rating(grain_area: float, grain_perimeter: float) -> float:
     for how circular it is.
     """
     return (4 * np.pi * grain_area) / (grain_perimeter * grain_perimeter)
+
+
+# def find_grain_volume(mask: np.ndarray, mask_regionprop, labelled_mask: np.ndarray, grain_mask: np.ndarray, pixel_to_nm_scaling: float):
+#     # Get mask of only the grain but the same shape as the entire mask
+#     grain_only_mask = mask * (labelled_mask == mask_regionprop.label)
+#     image_mask = np.ma.masked_array(mask, mask=np.invert(grain_only_mask), fill_value=np.nan).filled()
+
+#     return np.nansum(image_mask) * pixel_to_nm_scaling**2 * (1e-9)**3
