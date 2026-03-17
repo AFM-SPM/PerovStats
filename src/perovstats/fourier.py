@@ -88,6 +88,7 @@ def split_frequencies(
         # Convert high-pass and low-pass to image format
         arr = high_pass
         arr = normalise_array(arr)
+        # np.save(file_output_dir / "images" / f"{filename}_high_pass_npy.npy", arr)
         img = Image.fromarray(arr * 255).convert("L")
         img_dir = Path(file_output_dir) / "images"
         img_dir.mkdir(parents=True, exist_ok=True)

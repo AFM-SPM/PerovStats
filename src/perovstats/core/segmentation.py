@@ -42,6 +42,8 @@ def segment_image(
         threshold_block_size = config["segmentation"]["threshold_block_size"] / pixel_to_nm_scaling
         threshold_block_size = 2 * round((threshold_block_size - 1) / 2) + 1
 
+        threshold_offset = config["segmentation"]["threshold_offset"]
+
         # Cleaning config options - adjusted for pixel to nm scaling
         area_threshold = config["segmentation"]["cleaning"]["area_threshold"]
         if area_threshold:
@@ -60,6 +62,7 @@ def segment_image(
         np_mask = create_grain_mask(
             im,
             threshold_block_size=threshold_block_size,
+            threshold_offset=threshold_offset,
             smooth_sigma=smooth_sigma,
             area_threshold=area_threshold,
             disk_radius=disk_radius,
@@ -111,6 +114,7 @@ def clean_mask(
 def create_grain_mask(
     im: np.ndarray,
     threshold_block_size: float,
+    threshold_offset: float,
     smooth_sigma: float,
     area_threshold: float,
     disk_radius: float,
@@ -125,6 +129,8 @@ def create_grain_mask(
         Image to be masked.
     threshold_block_size : float
         Size of blocks to be thresholded once at a time.
+    threshold_offset : float
+        Offset of the threshold calculated in threshold_local.
     smooth_sigma : float
         Amount of smoothing applied to the image before thresholding.
     area_threshold : float
@@ -137,8 +143,9 @@ def create_grain_mask(
     np.ndarray
         Skeletonised mask of grain borders.
     """
-    im_ = ski.filters.gaussian(im, sigma=smooth_sigma) # Smooth image
-    local_thresh = ski.filters.threshold_local(im_, block_size=threshold_block_size) # Gets an array of local thresholds
+    im_ = ski.filters.gaussian(im, sigma=smooth_sigma)
+    # Get an array of thresholds for each pixel
+    local_thresh = ski.filters.threshold_local(im_, block_size=threshold_block_size, offset=threshold_offset)
     mask = im_ > local_thresh
     mask = clean_mask(mask, area_threshold, disk_radius) if area_threshold else mask
     selection = ski.util.invert(mask)
