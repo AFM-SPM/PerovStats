@@ -39,7 +39,7 @@ def find_smear_areas(
         threshold = config["smear_threshold"]
         smooth_sigma= config["smooth_sigma"]
         min_size = config["min_smear_size"]
-        min_smear_areas = config["min_smear_sections"]
+        min_smear_area_percent = config["min_smear_area_percent"]
         lowpass_threshold = config["lowpass_threshold"]
 
         high_pass = image_object.high_pass
@@ -81,19 +81,24 @@ def find_smear_areas(
 
         _, n = label(final_mask)
 
-        logger.info(f"[{filename}] : Smear areas found: {n}")
-        if n < min_smear_areas:
-            logger.info(f"[{filename}] : Minimum number of smear areas not met, skipping smear removal.")
+        percentage = round(np.mean(final_mask) * 100, 2)
+
+        logger.info(f"[{filename}] : Smear areas found: {n} ({percentage}% of mask)")
+        if percentage < min_smear_area_percent:
+            logger.info(f"[{filename}] : Minimum smear coverage not met, skipping smear removal.")
             final_mask = np.zeros_like(final_mask)
             smears_removed = False
+            percentage = 0
         else:
             smears_removed = True
 
         image_object.smears = final_mask
         image_object.smears_removed = smears_removed
+        image_object.smear_percent = percentage
     else:
         image_object.smears = np.zeros_like(image_object.high_pass)
         image_object.smears_removed = False
+        image_object.smear_percent = 0
 
 
 def clean_smears(mask: np.ndarray, smear_mask: np.ndarray) -> np.ndarray:
@@ -114,14 +119,14 @@ def clean_smears(mask: np.ndarray, smear_mask: np.ndarray) -> np.ndarray:
         The resultant grain mask with sections overlapping with the smear mask removed.
 
     """
-    removed_grains_area = 0
     mask_labelled = morphology.label(mask)
     mask_regionprops = regionprops(mask_labelled)
+    # for each grain in mask
     for region in mask_regionprops:
         region_crop = mask_labelled[region.slice] == region.label
         smear_crop = smear_mask[region.slice].astype(bool)
+        # if any pixels overlap with smear mask, remove them
         if np.any(region_crop & smear_crop):
-            removed_grains_area += region.area
             mask[region.slice][region_crop] = 0
 
-    return mask, removed_grains_area
+    return mask
