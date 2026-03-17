@@ -79,8 +79,14 @@ class ImageData:
         The frequency to cutoff during the highpass of the fourier transform in nm.
     cutoff : float
         The actual cutoff for the fourier transform.
+    mean_grain_area : float
+        The mean area of grains in the image.
+    median_grain_area : float
+        The median area of grains in the image.
+    mode_grain_area : float
+        The mode area of grains in the image.
     pixel_to_nm_scaling : float
-
+        Image scaling of pixels to nm.
     """
     image_original: np.ndarray | None = None
     image_flattened: np.ndarray | None = None
@@ -101,9 +107,9 @@ class ImageData:
     num_grains: int | None = None
     cutoff_freq_nm: float | None = None
     cutoff: float | None = None
-    mean_grain_size: float | None = None
-    median_grain_size: float | None = None
-    mode_grain_size: float | None = None
+    mean_grain_area: float | None = None
+    median_grain_area: float | None = None
+    mode_grain_area: float | None = None
     pixel_to_nm_scaling: float | None = None
     threshold: float | None = None
 
@@ -120,9 +126,9 @@ class ImageData:
             "pixel_to_nm_scaling": self.pixel_to_nm_scaling,
             "cutoff_freq_nm": self.cutoff_freq_nm,
             "cutoff": self.cutoff,
-            "mean_grain_size_nm2": self.mean_grain_size,
-            "median_grain_size_nm2": self.median_grain_size,
-            "mode_grain_size_nm2": self.mode_grain_size,
+            "mean_grain_area_nm2": self.mean_grain_area,
+            "median_grain_area_nm2": self.median_grain_area,
+            "mode_grain_area_nm2": self.mode_grain_area,
             "smears_removed": self.smears_removed,
             "smear_percent": self.smear_percent,
         }

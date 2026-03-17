@@ -4,9 +4,9 @@ from skimage.measure import regionprops, label
 
 from perovstats.grains import (
     find_grains,
-    find_median_grain_size,
-    find_mean_grain_size,
-    find_mode_grain_size,
+    find_median_grain_area,
+    find_mean_grain_area,
+    find_mode_grain_area,
     find_circularity_rating
 )
 
@@ -22,18 +22,18 @@ expected_median = 2
 expected_mean = 2.2857142857142856
 expected_mode = 1
 
-def test_find_median_grain_size():
-    median = find_median_grain_size(values)
+def test_find_median_grain_area():
+    median = find_median_grain_area(values)
     assert median == expected_median
 
 
-def test_find_mean_grain_size():
-    mean = find_mean_grain_size(values)
+def test_find_mean_grain_area():
+    mean = find_mean_grain_area(values)
     assert mean == expected_mean
 
 
-def test_find_mode_grain_size():
-    mode = find_mode_grain_size(values)
+def test_find_mode_grain_area():
+    mode = find_mode_grain_area(values)
     assert mode == expected_mode
 
 

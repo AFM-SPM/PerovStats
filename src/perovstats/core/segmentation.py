@@ -1,11 +1,83 @@
 from __future__ import annotations
+from pathlib import Path
 
+from loguru import logger
 import numpy.typing as npt
 from skimage import morphology
 from skimage.measure import regionprops
 from scipy.special import erf
 import skimage as ski
 import numpy as np
+from matplotlib import pyplot as plt
+
+from .classes import ImageData
+from .image_processing import normalise_array
+
+
+def segment_image(
+    config: dict[str, any],
+    image_object: ImageData
+) -> None:
+    """
+    Main method for splitting an image by frequency.
+
+    Parameters
+    ----------
+    config: dict[str, any]
+        Dictionary of configuration settings
+    image_object
+        Class object of the current image containing all relevant
+        data.
+    """
+    output_dir = Path(config["output_dir"])
+
+    if image_object.high_pass is not None:
+        # For each image create and save a mask
+        fname = image_object.filename
+        im = image_object.high_pass
+        pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
+
+        # Scale threshold block size with image scaling and round to nearest odd integer
+        threshold_block_size = config["segmentation"]["threshold_block_size"] / pixel_to_nm_scaling
+        threshold_block_size = 2 * round((threshold_block_size - 1) / 2) + 1
+
+        # Cleaning config options - adjusted for pixel to nm scaling
+        area_threshold = config["segmentation"]["cleaning"]["area_threshold"]
+        if area_threshold:
+            area_threshold = area_threshold / (pixel_to_nm_scaling**2)
+            disk_radius = config["segmentation"]["cleaning"]["disk_radius_factor"] / pixel_to_nm_scaling
+        else:
+            disk_radius = None
+
+        # Smoothing config options - adjusted for pixel to nm scaling
+        smooth_sigma = config["segmentation"]["smoothing"]["sigma"]
+        if smooth_sigma:
+            smooth_sigma = smooth_sigma / pixel_to_nm_scaling
+
+        logger.info(f"[{image_object.filename}] : *** Mask creation ***")
+        logger.info(f"[{image_object.filename}] : Creating grain mask")
+        np_mask = create_grain_mask(
+            im,
+            threshold_block_size=threshold_block_size,
+            smooth_sigma=smooth_sigma,
+            area_threshold=area_threshold,
+            disk_radius=disk_radius,
+        )
+
+        image_object.mask = np_mask
+
+        # Convert to image format and save
+        img_dir = Path(output_dir) / fname / "images"
+        img_dir.mkdir(parents=True, exist_ok=True)
+        plt.imsave(output_dir / fname / "images" / f"{fname}_mask.jpg", np_mask)
+
+        # Save high-pass with mask skeleton
+        high_pass = image_object.high_pass
+        rgb_highpass = np.stack((high_pass,)*3, axis=-1)
+        rgb_highpass = normalise_array(rgb_highpass)
+        rgb_highpass[np_mask > 0] = [1, 0, 0]
+        plt.imsave(output_dir / fname / "images" / f"{fname}_mask_overlay.jpg", rgb_highpass)
+
 
 
 def clean_mask(

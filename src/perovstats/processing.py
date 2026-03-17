@@ -6,11 +6,12 @@ from loguru import logger
 from topostats.io import LoadScans
 import pandas as pd
 
-from .core.io import save_to_csv, save_config
 from .core.classes import ImageData, PerovStats
+from .core.io import save_to_csv, save_config
+from .core.segmentation import segment_image
 from .filters import run_filters
 from .grains import find_grains
-from .fourier import run_frequency_splitting
+from .fourier import split_frequencies
 from .smears import find_smear_areas
 
 
@@ -63,16 +64,19 @@ def process(
         logger.debug(f"[{image_object.filename}] : Image dimensions: {image_object.image_original.shape}")
         logger.debug(f"[{image_object.filename}] : pixel_to_nm_scaling: {image_object.pixel_to_nm_scaling}")
 
-        # Filter images
+        # Filter image
         run_filters(perovstats_object.config, image_object)
 
-        # Apply fourier analysis and create binary mask of resultant high-pass image
-        run_frequency_splitting(perovstats_object.config, image_object)
+        # Apply fourier transform to split the image into a low-passed and high-passed image
+        split_frequencies(perovstats_object.config, image_object)
+
+        # Generate grain mask of the high-passed image
+        segment_image(perovstats_object.config, image_object)
 
         # Find smear areas to be ignored/ removed
         find_smear_areas(perovstats_object.config, image_object)
 
-        # Find grains from mask
+        # Identify individual grains from mask and generate statistics on them
         find_grains(perovstats_object.config, image_object)
 
         logger.info(f"[{image_object.filename}] : *** Exporting data ***")

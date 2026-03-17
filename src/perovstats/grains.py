@@ -68,13 +68,13 @@ def find_grains(
     grains_per_nm2 = len(mask_areas) / mask_area_nm
 
     if len(mask_areas) > 0:
-        mean_grain_size = find_mean_grain_size(mask_areas)
-        median_grain_size = find_median_grain_size(mask_areas)
-        mode_grain_size = find_mode_grain_size(mask_areas)
+        mean_grain_area = find_mean_grain_area(mask_areas)
+        median_grain_area = find_median_grain_area(mask_areas)
+        mode_grain_area = find_mode_grain_area(mask_areas)
     else:
-        mean_grain_size = 0
-        median_grain_size = 0
-        mode_grain_size = 0
+        mean_grain_area = 0
+        median_grain_area = 0
+        mode_grain_area = 0
 
     mask_data = {
         "filename": filename,
@@ -84,9 +84,9 @@ def find_grains(
         "mask_size_y_nm": mask_size_y_nm,
         "mask_area_nm": mask_area_nm,
         "num_grains": len(mask_areas),
-        "mean_grain_size": mean_grain_size,
-        "median_grain_size": median_grain_size,
-        "mode_grain_size": mode_grain_size
+        "mean_grain_area": mean_grain_area,
+        "median_grain_area": median_grain_area,
+        "mode_grain_area": mode_grain_area
     }
 
     data.append(mask_data)
@@ -126,7 +126,7 @@ def find_grains(
     plt.imsave(save_dir / f"{filename}_smears.jpg", smear_overlay)
 
 
-def find_median_grain_size(values: list[float]) -> float:
+def find_median_grain_area(values: list[float]) -> float:
     values = sorted(values)
     count = len(values)
     mid = count // 2
@@ -137,11 +137,11 @@ def find_median_grain_size(values: list[float]) -> float:
         return (values[mid - 1] + values[mid]) / 2
 
 
-def find_mean_grain_size(values: list[float]) -> float:
+def find_mean_grain_area(values: list[float]) -> float:
     return sum(values) / len(values)
 
 
-def find_mode_grain_size(values: list[float]) -> float:
+def find_mode_grain_area(values: list[float]) -> float:
     counts = {}
     for v in values:
         counts[v] = counts.get(v, 0) + 1
