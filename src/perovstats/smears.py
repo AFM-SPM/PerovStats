@@ -5,8 +5,8 @@ from scipy import ndimage as ndi
 from skimage import morphology
 from skimage.measure import regionprops
 
-from .core.image_processing import get_horizontal_gradients
 from .core.classes import ImageData
+from .core.image_processing import get_horizontal_gradients
 
 
 def find_smear_areas(
@@ -31,62 +31,65 @@ def find_smear_areas(
         Filename currently being processed, used for logging info.
     """
     config = config["remove_smears"]
-    threshold = config["smear_threshold"]
-    smooth_sigma= config["smooth_sigma"]
-    min_size = config["min_smear_size"]
-    min_smear_areas = config["min_smear_sections"]
-    lowpass_threshold = config["lowpass_threshold"]
+    if config["run"]:
+        threshold = config["smear_threshold"]
+        smooth_sigma= config["smooth_sigma"]
+        min_size = config["min_smear_size"]
+        min_smear_areas = config["min_smear_sections"]
+        lowpass_threshold = config["lowpass_threshold"]
 
-    high_pass = image_object.high_pass
-    low_pass = image_object.low_pass
-    filename = image_object.filename
+        high_pass = image_object.high_pass
+        low_pass = image_object.low_pass
+        filename = image_object.filename
 
-    logger.info(f"[{filename}] : *** Finding smear areas ***")
+        logger.info(f"[{filename}] : *** Finding smear areas ***")
 
-    # Compare the horizontal and vertical gradient of the high pass, marking pixels(/ areas) that have a
-    # value over a given threshold
-    smooth = ndi.gaussian_filter(high_pass, sigma=smooth_sigma)
-    grad_x = np.abs(ndi.sobel(smooth, axis=1))
-    grad_y = np.abs(ndi.sobel(smooth, axis=0))
+        # Compare the horizontal and vertical gradient of the high pass, marking pixels(/ areas) that have a
+        # value over a given threshold
+        smooth = ndi.gaussian_filter(high_pass, sigma=smooth_sigma)
+        grad_x = np.abs(ndi.sobel(smooth, axis=1))
+        grad_y = np.abs(ndi.sobel(smooth, axis=0))
 
-    # Value given to each pixel based on the difference between horizontal and vertical gradient
-    stripe_score = grad_y / (grad_x + 1e-6) # 1e-6 prevents 0 division
+        # Value given to each pixel based on the difference between horizontal and vertical gradient
+        stripe_score = grad_y / (grad_x + 1e-6) # 1e-6 prevents 0 division
 
-    mask = stripe_score > threshold
+        mask = stripe_score > threshold
 
-    # Remove smears not meeting minimum area requirements
-    labeled, n = label(mask)
-    for i in range(1, n+1):
-        if np.sum(labeled == i) < min_size:
-            mask[labeled == i] = 0
+        # Remove smears not meeting minimum area requirements
+        labeled, n = label(mask)
+        for i in range(1, n+1):
+            if np.sum(labeled == i) < min_size:
+                mask[labeled == i] = 0
 
-    mask = binary_closing(mask, structure=np.ones((5, 10)))
+        mask = binary_closing(mask, structure=np.ones((5, 10)))
 
-    # Compare the mask calculated above with a mask selecting all pixels with a horizontal gradient over
-    # a given threshold in the low-pass image, creating a new mask containing all overlapping pixels
-    low_pass_gradient_mask = get_horizontal_gradients(low_pass, threshold=lowpass_threshold)
-    final_mask = mask & low_pass_gradient_mask
-    final_mask = binary_dilation(final_mask, structure=np.ones((3, 3)))
+        # Compare the mask calculated above with a mask selecting all pixels with a horizontal gradient over
+        # a given threshold in the low-pass image, creating a new mask containing all overlapping pixels
+        low_pass_gradient_mask = get_horizontal_gradients(low_pass, threshold=lowpass_threshold)
+        final_mask = mask & low_pass_gradient_mask
+        final_mask = binary_dilation(final_mask, structure=np.ones((3, 3)))
 
-    # Remove smears not meeting minimum area requirements
-    labeled, n = label(final_mask)
-    for i in range(1, n+1):
-        if np.sum(labeled == i) < min_size:
-            final_mask[labeled == i] = 0
+        # Remove smears not meeting minimum area requirements
+        labeled, n = label(final_mask)
+        for i in range(1, n+1):
+            if np.sum(labeled == i) < min_size:
+                final_mask[labeled == i] = 0
 
-    _, n = label(final_mask)
+        _, n = label(final_mask)
 
-    logger.info(f"[{filename}] : Smear areas found: {n}")
-    if n < min_smear_areas:
-        logger.info(f"[{filename}] : Minimum number of smear areas not met, skipping smear removal.")
-        final_mask = np.zeros_like(final_mask)
-        smears_removed = False
+        logger.info(f"[{filename}] : Smear areas found: {n}")
+        if n < min_smear_areas:
+            logger.info(f"[{filename}] : Minimum number of smear areas not met, skipping smear removal.")
+            final_mask = np.zeros_like(final_mask)
+            smears_removed = False
+        else:
+            smears_removed = True
+
+        image_object.smears = final_mask
+        image_object.smears_removed = smears_removed
     else:
-        smears_removed = True
-
-    image_object.smears = final_mask
-    image_object.smears_removed = smears_removed
-
+        image_object.smears = np.zeros_like(image_object.high_pass)
+        image_object.smears_removed = False
 
 def clean_smears(mask: np.ndarray, smear_mask: np.ndarray) -> np.ndarray:
     """

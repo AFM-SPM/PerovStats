@@ -6,16 +6,7 @@ from perovstats.fourier import (
     perform_fourier,
     find_cutoff,
     split_frequencies,
-    run_frequency_splitting
 )
-
-
-def test_run_frequency_splitting(dummy_perovstats_object: PerovStats):
-    image_data = dummy_perovstats_object.images[0]
-
-    run_frequency_splitting(dummy_perovstats_object.config, image_data)
-
-    assert image_data.mask.shape == image_data.image_original.shape
 
 
 @pytest.mark.parametrize(

@@ -1,12 +1,22 @@
 import numpy as np
 
 from perovstats.core.segmentation import (
+    segment_image,
     clean_mask,
     create_grain_mask,
     apply_cutoff,
     create_frequency_mask,
     tidy_border
 )
+from perovstats.core.classes import PerovStats
+
+
+def test_segment_image(dummy_perovstats_object: PerovStats):
+    image_data = dummy_perovstats_object.images[0]
+
+    segment_image(dummy_perovstats_object.config, image_data)
+
+    assert image_data.mask.shape == image_data.image_original.shape
 
 
 def test_create_grain_mask(dummy_original_image: np.ndarray) -> None:
