@@ -1,7 +1,17 @@
 from __future__ import annotations
-
+from pathlib import Path
 from yaml import safe_dump
+import numpy as np
+import matplotlib.pyplot as plt
 import pandas as pd
+
+
+def save_image(image: np.ndarray, output_dir: Path, filename: str, cmap: str='grey') -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if cmap:
+        plt.imsave(output_dir / filename, image, cmap=cmap)
+    else:
+        plt.imsave(output_dir / filename, image)
 
 
 def save_to_csv(df: pd.DataFrame, output_filename: str) -> None:
