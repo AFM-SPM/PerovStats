@@ -5,11 +5,11 @@ from loguru import logger
 import numpy as np
 from skimage.color import label2rgb
 from skimage.measure import label, regionprops
-import matplotlib.pyplot as plt
 
 from .core.classes import Grain, ImageData
 from .core.image_processing import normalise_array
 from .core.segmentation import tidy_border
+from .core.io import save_image
 from .smears import clean_smears
 
 
@@ -115,14 +115,16 @@ def find_grains(
 
     # Save high-pass with mask skeleton overlay
     mask_rgb = mask_data["mask_rgb"]
+    save_dir = Path(config_yaml["output_dir"]) / filename / "images"
+    save_image(mask_rgb, save_dir, f"{filename}_rgb_grains.jpg", cmap=None)
     smear_overlay = np.stack((image_object.high_pass,)*3, axis=-1)
     smear_overlay = normalise_array(smear_overlay)
     mask_2d = np.all(mask_rgb == 0, axis=2)
     smear_overlay[mask_2d == 0] = [1, 1, 1]
     smear_overlay[image_object.smears == 1] = [1, 0, 0]
-    save_dir = Path(config_yaml["output_dir"]) / filename / "images"
-    save_dir.mkdir(parents=True, exist_ok=True)
-    plt.imsave(save_dir / f"{filename}_smears.jpg", smear_overlay)
+    save_image(smear_overlay, save_dir, f"{filename}_smears.jpg")
+
+    # Save grain mask with coloured grains
 
 
 def find_median_grain_area(values: list[float]) -> float:

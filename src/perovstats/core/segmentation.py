@@ -8,8 +8,8 @@ from skimage.measure import regionprops
 from scipy.special import erf
 import skimage as ski
 import numpy as np
-from matplotlib import pyplot as plt
 
+from .io import save_image
 from .classes import ImageData
 from .image_processing import normalise_array
 
@@ -38,22 +38,24 @@ def segment_image(
         im = image_object.high_pass
         pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
 
+        config = config["segmentation"]
+
         # Scale threshold block size with image scaling and round to nearest odd integer
-        threshold_block_size = config["segmentation"]["threshold_block_size"] / pixel_to_nm_scaling
+        threshold_block_size = config["threshold_block_size"] / pixel_to_nm_scaling
         threshold_block_size = 2 * round((threshold_block_size - 1) / 2) + 1
 
-        threshold_offset = config["segmentation"]["threshold_offset"]
+        threshold_offset = config["threshold_offset"]
 
         # Cleaning config options - adjusted for pixel to nm scaling
-        area_threshold = config["segmentation"]["cleaning"]["area_threshold"]
+        area_threshold = config["cleaning"]["area_threshold"]
         if area_threshold:
             area_threshold = area_threshold / (pixel_to_nm_scaling**2)
-            disk_radius = config["segmentation"]["cleaning"]["disk_radius_factor"] / pixel_to_nm_scaling
+            disk_radius = config["cleaning"]["disk_radius_factor"] / pixel_to_nm_scaling
         else:
             disk_radius = None
 
         # Smoothing config options - adjusted for pixel to nm scaling
-        smooth_sigma = config["segmentation"]["smoothing"]["sigma"]
+        smooth_sigma = config["smoothing"]["sigma"]
         if smooth_sigma:
             smooth_sigma = smooth_sigma / pixel_to_nm_scaling
 
@@ -72,15 +74,14 @@ def segment_image(
 
         # Convert to image format and save
         img_dir = Path(output_dir) / fname / "images"
-        img_dir.mkdir(parents=True, exist_ok=True)
-        plt.imsave(output_dir / fname / "images" / f"{fname}_mask.jpg", np_mask)
+        save_image(np_mask, img_dir, f"{fname}_mask.jpg")
 
         # Save high-pass with mask skeleton
         high_pass = image_object.high_pass
         rgb_highpass = np.stack((high_pass,)*3, axis=-1)
         rgb_highpass = normalise_array(rgb_highpass)
         rgb_highpass[np_mask > 0] = [1, 0, 0]
-        plt.imsave(output_dir / fname / "images" / f"{fname}_mask_overlay.jpg", rgb_highpass)
+        save_image(rgb_highpass, img_dir, f"{fname}_mask_overlay.jpg")
 
 
 def clean_mask(

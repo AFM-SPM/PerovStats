@@ -4,12 +4,12 @@ import cv2
 
 from loguru import logger
 import numpy as np
-from PIL import Image
 import pyfftw
 
 from .core.classes import ImageData
 from .core.image_processing import extend_image, normalise_array
 from .core.segmentation import apply_cutoff, create_frequency_mask
+from .core.io import save_image
 
 
 def split_frequencies(
@@ -88,16 +88,12 @@ def split_frequencies(
         # Convert high-pass and low-pass to image format
         arr = high_pass
         arr = normalise_array(arr)
-        # np.save(file_output_dir / "images" / f"{filename}_high_pass_npy.npy", arr)
-        img = Image.fromarray(arr * 255).convert("L")
         img_dir = Path(file_output_dir) / "images"
-        img_dir.mkdir(parents=True, exist_ok=True)
-        img.save(file_output_dir / "images" / f"{filename}_high_pass.jpg")
+        save_image(arr, img_dir, f"{filename}_high_pass.jpg", cmap="grey")
 
         arr = low_pass
         arr = normalise_array(arr)
-        img = Image.fromarray(arr * 255).convert("L")
-        img.save(file_output_dir / "images" / f"{filename}_low_pass.jpg")
+        save_image(arr, img_dir, f"{filename}_low_pass.jpg", cmap="grey")
     else:
         logger.info(f"[{image_object.filename}] : Frequency splitting is disabled by config, the original image will be used.")
         if image_object.image_flattened is not None:
@@ -107,8 +103,7 @@ def split_frequencies(
 
     arr = image_object.image_original
     arr = normalise_array(arr)
-    img = Image.fromarray(arr * 255).convert("L")
-    img.save(file_output_dir / "images" / f"{filename}_original.jpg")
+    save_image(arr, file_output_dir / "images", f"{filename}_original.jpg", cmap="grey")
 
 
 def perform_fourier(
@@ -248,6 +243,6 @@ def find_cutoff(
 
     if best_cutoff is None:
         logger.warning(
-            f"[{image_object.filename}] : No cutoff could be found for the image. Skipping.."
+            f"[{image_object.filename}] : No cutoff could be found for the image. Please consider adjusting the cutoff bounds in the config."
         )
     return best_cutoff
