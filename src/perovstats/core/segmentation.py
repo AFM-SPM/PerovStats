@@ -21,7 +21,7 @@ def segment_image(
 ) -> None:
     """
     Create the segmentation mask for an image, ready to be analysed for grain finding.
-    This method also saves iamges of the mask.
+    This method also saves images of the mask.
 
     Parameters
     ----------
@@ -251,7 +251,7 @@ class Skeletonisation:
         """
         height, width = self.mask.shape
         queue = []
-        enqueued = np.zeros_like(self.mask, dtype=bool) # Boolean map of if the pixel is in queue
+        queue_map = np.zeros_like(self.mask, dtype=bool) # Boolean map of if the pixel is in queue
 
         # Find all potential pixels to delete
         for row in range(1, height-1):
@@ -260,11 +260,11 @@ class Skeletonisation:
                     # If a 1 touches a 0 it is a boundary pixel
                     if np.min(self.mask[row-1:row+2, col-1:col+2]) == 0:
                         heapq.heappush(queue, (priority_map[row, col], row, col))
-                        enqueued[row, col] = True
+                        queue_map[row, col] = True
 
         while queue:
             _, row, col = heapq.heappop(queue)
-            enqueued[row, col] = False
+            queue_map[row, col] = False
             # Skip if it's been removed from the mask
             if self.mask[row, col] == 0:
                 continue
@@ -272,12 +272,12 @@ class Skeletonisation:
             if self._is_safe_to_delete(row, col):
                 self.mask[row, col] = 0
                 # Add neighbours in remaining mask to queue as they have become boundaries
-                for dr, dc in [(-1,0), (1,0), (0,-1), (0,1), (-1,-1), (-1,1), (1,-1), (1,1)]:
-                    nr, nc = row + dr, col + dc
-                    if self.mask[nr, nc] == 1 and not enqueued[nr, nc]:
-                        heapq.heappush(queue, (priority_map[nr, nc], nr, nc))
-                        enqueued[nr, nc] = True
-            else:
+                for dirrow, dircol in [(-1,0), (1,0), (0,-1), (0,1), (-1,-1), (-1,1), (1,-1), (1,1)]:
+                    newrow, newcol = row + dirrow, col + dircol
+                    if self.mask[newrow, newcol] == 1 and not queue_map[newrow, newcol]:
+                        heapq.heappush(queue, (priority_map[newrow, newcol], newrow, newcol))
+                        queue_map[newrow, newcol] = True
+            else: # Skip if pixel is not safe to delete
                 pass
 
 
