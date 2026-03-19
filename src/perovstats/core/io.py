@@ -7,6 +7,20 @@ import pandas as pd
 
 
 def save_image(image: np.ndarray, output_dir: Path, filename: str, cmap: str='grey') -> None:
+    """
+    Save an array to file as an image
+
+    Parameters
+    ----------
+    image : np.ndarray
+        The array to save to file.
+    output_dir : Path
+        The directory to save the image to.
+    filename : str
+        The name of the file to be created/ saved to.
+    cmap : str
+        The cmap to be used in the imsave() function. By default is 'grey'.
+    """
     output_dir.mkdir(parents=True, exist_ok=True)
     if cmap:
         plt.imsave(output_dir / filename, image, cmap=cmap)

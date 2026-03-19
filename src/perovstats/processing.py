@@ -45,6 +45,7 @@ def process(
         logger.warning(f"Channel {load_config['channel']} not found in file. Please ensure the config option is correct and all files contain the required channel.")
     image_dicts = loadscans.img_dict
 
+    # Create the dataclasses for the whole process and for each image found
     perovstats_object = PerovStats(config=config, images=[])
     for filename, topostats_object in image_dicts.items():
         image_data = ImageData(
@@ -134,6 +135,20 @@ def completion_message(perovstats_object: PerovStats, time_taken: str, time_per_
 
 
 def format_time(seconds: float) -> str:
+    """
+    Turn the time recorded (float of seconds) into text formatted into hours, minutes,
+    and seconds depending on the length.
+
+    Parameters
+    ----------
+    seconds : float
+        The overall seconds the process took from start to finish.
+
+    Returns
+    -------
+    str
+        The formatted time showing hours, minutes, and seconds.
+    """
     if seconds < 60:
         return f"{seconds:.2f}s"
 

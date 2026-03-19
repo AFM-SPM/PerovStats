@@ -60,7 +60,6 @@ def segment_image(
         if smooth_sigma:
             smooth_sigma = smooth_sigma / pixel_to_nm_scaling
 
-
         # Skeletonisation config option
         height_bias = config["height_bias"]
 

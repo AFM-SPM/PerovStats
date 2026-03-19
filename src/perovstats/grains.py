@@ -19,6 +19,12 @@ def find_grains(
     ) -> None:
     """
     Method to find grains from a mask and list the stats about them.
+    A mask is taken and segments are found before being filtered for things such as:
+        - Grains with a size under a given threshold are removed
+        - Grains touching the edge of the image are removed
+        - Grains touching smear areas are removed
+    Stats are then recorded for the grains, both individually and averages across
+    the whole image.
 
     Parameters
     ----------
@@ -49,6 +55,7 @@ def find_grains(
 
     labelled_mask_rgb = label2rgb(labelled_mask, bg_label=0, saturation=0)
 
+    # Get the area, perimeter and individual grain images for each grain
     mask_regionprops = regionprops(labelled_mask)
     mask_areas = [
         regionprop.area * pixel_to_nm_scaling**2 for regionprop in mask_regionprops
@@ -61,6 +68,7 @@ def find_grains(
     ]
     all_masks_grain_areas.extend(mask_areas)
 
+    # Averages and overall stats for the entire image
     mask_size_x_nm = mask.shape[1] * pixel_to_nm_scaling
     mask_size_y_nm = mask.shape[0] * pixel_to_nm_scaling
     mask_area_nm = mask_size_x_nm * mask_size_y_nm
@@ -113,7 +121,7 @@ def find_grains(
         f"[{filename}] : Obtained {image_object.num_grains} grains",
     )
 
-    # Save high-pass with mask skeleton overlay
+    # Save high-pass with mask skeleton overlay and an image colouring grains individually
     mask_rgb = mask_data["mask_rgb"]
     save_dir = Path(config_yaml["output_dir"]) / filename / "images"
     save_image(mask_rgb, save_dir, f"{filename}_rgb_grains.jpg", cmap=None)
@@ -123,8 +131,6 @@ def find_grains(
     smear_overlay[mask_2d == 0] = [1, 1, 1]
     smear_overlay[image_object.smears == 1] = [1, 0, 0]
     save_image(smear_overlay, save_dir, f"{filename}_smears.jpg")
-
-    # Save grain mask with coloured grains
 
 
 def find_median_grain_area(values: list[float]) -> float:

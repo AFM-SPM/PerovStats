@@ -33,6 +33,8 @@ def get_horizontal_gradients(
     """
     Use the sobel formula to assign a gradient to each pixel in an array
     for the horizontal axis.
+    ndi.sobel() is an edge detection formula. `axis=1` means that it tracks horizontal edges
+    which is a characteristic of smear areas.
 
     Parameters
     ----------
