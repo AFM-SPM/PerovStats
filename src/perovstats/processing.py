@@ -71,6 +71,10 @@ def process(
         # Apply fourier transform to split the image into a low-passed and high-passed image
         split_frequencies(perovstats_object.config, image_object)
 
+        # If frequency splitting was run and failed skip processing on the rest of the image
+        if image_object.high_pass is None:
+            continue
+
         # Generate grain mask of the high-passed image
         segment_image(perovstats_object.config, image_object)
 
