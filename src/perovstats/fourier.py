@@ -255,7 +255,7 @@ def apply_cutoff(
     edge_width: float = 0,
 ) -> np.ndarray:
     """
-    Create a mask to filter frequencies.
+    Create a mask to filter frequencies. Using the found cutoff frequency.
 
     Parameters
     ----------

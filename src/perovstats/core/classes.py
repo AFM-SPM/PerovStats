@@ -28,6 +28,16 @@ class Grain:
     grain_volume: float | None = None
 
     def to_dict(self) -> dict:
+        """
+        Create and return a dictionary containing all values to be saved to a csv
+        from this class.
+        This does not include larger data structures such as np.ndarrays (masks, images).
+
+        Returns
+        -------
+        dict
+            Dictionary of all values to be saved to csv.
+        """
         return {
             "grain_id": self.grain_id,
             "grain_area": self.grain_area,
@@ -115,6 +125,16 @@ class ImageData:
     threshold: float | None = None
 
     def to_dict(self) -> dict:
+        """
+        Create and return a dictionary containing all values to be saved to a csv
+        from this class.
+        This does not include larger data structures such as np.ndarrays (masks, images).
+
+        Returns
+        -------
+        dict
+            Dictionary of all values to be saved to csv.
+        """
         return {
             "file_dir": self.file_directory,
             "filename": self.filename,
