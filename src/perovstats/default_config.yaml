@@ -39,6 +39,7 @@ segmentation:
   cleaning:
     area_threshold: 10000 # in nm2.
     disk_radius_factor: 40
+  height_bias: 100 # The amount to prioritise lower pixels to the centre when skeletonising a mask.
 remove_smears:
     run: true
     smooth_sigma: 1 # How much to smooth the high pass image before comparing gradients

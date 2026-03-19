@@ -5,10 +5,11 @@ import cv2
 from loguru import logger
 import numpy as np
 import pyfftw
+from scipy.special import erf
 
 from .core.classes import ImageData
 from .core.image_processing import extend_image, normalise_array
-from .core.segmentation import apply_cutoff, create_frequency_mask
+from .core.segmentation import create_frequency_mask
 from .core.io import save_image
 
 
@@ -246,3 +247,36 @@ def find_cutoff(
             f"[{image_object.filename}] : No cutoff could be found for the image. Please consider adjusting the cutoff bounds in the config."
         )
     return best_cutoff
+
+
+def apply_cutoff(
+    f_grid,
+    cutoff: float,
+    edge_width: float = 0,
+) -> np.ndarray:
+    """
+    Create a mask to filter frequencies.
+
+    Parameters
+    ----------
+    f_grid : np.ndarray
+        Frequency grid of the image, each pixel containing a value indicating
+        the distance from the zero-frequency component in a radial frequency map.
+    cutoff : float
+        The spatial frequency cut off, expressed as a relative fraction
+        of the Nyquist frequency.
+    edge_width : float
+        Edge width, expressed as a relative fraction of the Nyquist
+        frequency. If zero, the filter has sharp edges. For non-zero
+        values the transition has the shape of the error function,
+        with the specified width.
+
+    Returns
+    -------
+    np.ndarray
+        Frequency mask.
+    """
+    if edge_width and edge_width > 0:
+        return 0.5 * (erf((f_grid - cutoff) / edge_width) + 1)
+    else:
+        return (f_grid >= cutoff).astype(np.float64)
