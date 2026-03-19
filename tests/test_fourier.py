@@ -6,6 +6,7 @@ from perovstats.fourier import (
     perform_fourier,
     find_cutoff,
     split_frequencies,
+    apply_cutoff
 )
 
 
@@ -97,3 +98,32 @@ def test_find_cutoff(
         pixel_to_nm_scaling=pixel_to_nm_scaling
     )
     assert cutoff == expected
+
+
+def test_apply_cutoff_hard_threshold() -> None:
+    """Test creating a frequency mask."""
+    f_grid = np.linspace(0, 1, 100).reshape(10, 10)
+    cutoff = 0.5
+    edge_width = 0
+    mask = apply_cutoff(f_grid, cutoff=cutoff, edge_width=edge_width)
+
+    assert mask.shape == (10, 10)
+    assert np.all(np.isin(mask, [0,1]))
+    assert mask[f_grid < cutoff].max() == 0
+    assert mask[f_grid >= cutoff].min() == 1
+
+
+def test_apply_cutoff_soft_threshold() -> None:
+    """Test creating a frequency mask."""
+    f_grid = np.linspace(0, 1, 100).reshape(10, 10)
+    cutoff = 0.5
+    edge_width = 0.1
+    mask = apply_cutoff(f_grid, cutoff=cutoff, edge_width=edge_width)
+
+    assert mask.shape == (10, 10)
+    assert mask.min() >= 0
+    assert mask.max() <= 1
+    assert np.any((mask > 0) & (mask < 1))
+    # Find midpoint and ensure the value is ~0.5
+    idx = np.unravel_index(np.argmin(np.abs(f_grid - cutoff)), f_grid.shape)
+    assert np.isclose(mask[idx], 0.5, atol=0.1)
