@@ -6,6 +6,7 @@ from loguru import logger
 import numpy as np
 import pyfftw
 from scipy.special import erf
+from scipy.optimize import bisect
 
 from .core.classes import ImageData
 from .core.image_processing import extend_image, normalise_array
@@ -37,7 +38,6 @@ def split_frequencies(
     edge_width = freqsplit_config["edge_width"]
     min_cutoff = freqsplit_config["cutoff_bounds"][0]
     max_cutoff = freqsplit_config["cutoff_bounds"][1]
-    cutoff_step = freqsplit_config["cutoff_step"]
     min_rms = freqsplit_config["min_rms"]
     output_dir = Path(config["output_dir"])
 
@@ -59,13 +59,13 @@ def split_frequencies(
             edge_width,
             min_cutoff=min_cutoff,
             max_cutoff=max_cutoff,
-            cutoff_step=cutoff_step,
             min_rms=min_rms,
             pixel_to_nm_scaling=pixel_to_nm_scaling,
         )
 
         if not cutoff:
             logger.error(f"[{filename}] : Cutoff frequency could not be determined. Skipping image..")
+            image_object.high_pass = None
             return
 
         cutoff_nm = 2 * pixel_to_nm_scaling / cutoff
@@ -175,17 +175,15 @@ def find_cutoff(
         edge_width: float,
         min_cutoff: float,
         max_cutoff: float,
-        cutoff_step: float,
         min_rms: float,
         pixel_to_nm_scaling: float,
 ) -> float:
     """
     Find an ideal cutoff for performing a fourier transform on
     the current image.
-    A frequency grid is created and then multiple cutoffs are tested
-    between the cutoff bounds defined in the config. The cutoff with the
-    lowest rms value over the minimum rms defined in config is then chosen
-    for the rest of the process.
+    A fourier transform is setup and executed, and a binary search algorithm
+    is used to test various cutoffs within the given range to find a value
+    closest to the ideal RMS value given.
 
     Parameters
     ----------
@@ -216,37 +214,45 @@ def find_cutoff(
     """
     image = image_object.image_original
     best_cutoff = None
-    min_found_rms = float('inf')
 
+    # Perform a fourier transform to find
     extended_image, _ = extend_image(image, method=cv2.BORDER_REFLECT)
+    # Align memory to store data on the fft as efficiently as possible
     fft_input = pyfftw.empty_aligned(extended_image.shape, dtype="complex128")
+    # Analysed computer hardware to find the more efficient way of performing the fourier transform
     fft_object = pyfftw.builders.fft2(fft_input)
 
+    # Copies data into the allocated memory and performs the transform
     fft_input[:] = extended_image
     full_dft = fft_object()
 
     n_pixels = full_dft.size
 
+    # Scale the minimum RMS with the pixel:nm scaling value
     min_rms = min_rms + (pixel_to_nm_scaling * 0.1)
 
+    # Define vars used for the binary search
     freq_grid = create_frequency_mask(extended_image)
+    power_spectrum_flat = np.abs(full_dft).ravel()**2
+    freq_grid_flat = freq_grid.ravel()
+    n_pixels_sq = n_pixels**2
 
-    for cutoff in np.arange(min_cutoff, max_cutoff, cutoff_step):
-        mask = apply_cutoff(freq_grid, cutoff, edge_width=edge_width)
-        masked_dft = full_dft * mask
+    # The function to take a cutoff and determine an rms from to be called multiple times by `bisect()`
+    def objective(cutoff):
+        mask = apply_cutoff(freq_grid_flat, cutoff, edge_width=edge_width)
+        current_sum_sq = np.dot(power_spectrum_flat, mask)
+        current_rms = np.sqrt(current_sum_sq / n_pixels_sq)
+        return current_rms - min_rms
 
-        sum_sq_magnitudes = np.sum(np.abs(masked_dft)**2)
-        current_rms = np.sqrt(sum_sq_magnitudes / (n_pixels**2))
-
-        if current_rms > min_rms and current_rms < min_found_rms:
-            min_found_rms = current_rms
-            best_cutoff = cutoff
-
-    if best_cutoff is None:
+    try:
+        # Run `objective()` multiple times to find the value giving an rms closest to the defined min_rms
+        best_cutoff = bisect(objective, min_cutoff, max_cutoff, xtol=1e-3)
+        return best_cutoff
+    except ValueError:
         logger.warning(
             f"[{image_object.filename}] : No cutoff could be found for the image. Please consider adjusting the cutoff bounds in the config."
         )
-    return best_cutoff
+        return None
 
 
 def apply_cutoff(

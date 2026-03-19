@@ -29,12 +29,11 @@ freqsplit:
   run: true
   edge_width: 0.1 # Width of borders of grains
   cutoff_bounds: [0, 0.2] # Minimum and maximum cutoff points for frequency splitting.
-  cutoff_step: 0.005 # Amount to increase the tested cutoff by for each iteration.
-  min_rms: 10 # Minimum roughness mean score of a high-pass after splitting along the cutoff.
+  min_rms: 11 # Minimum roughness mean score of a high-pass after splitting along the cutoff.
 segmentation:
   smoothing:
     sigma: 8
-  threshold_offset: -1 # Amount to change the calculated threshold by for segmentation. Lower thresholds increase sentitivity.
+  threshold_offset: -0.5 # Amount to change the calculated threshold by for segmentation. Lower thresholds increase sentitivity.
   threshold_block_size: 800 # Size of each block for local thresholding. Lower values increase segmentation sensitivity.
   cleaning:
     area_threshold: 10000 # in nm2.
