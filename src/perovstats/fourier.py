@@ -10,7 +10,6 @@ from scipy.optimize import bisect
 
 from .core.classes import ImageData
 from .core.image_processing import extend_image, normalise_array
-from .core.segmentation import create_frequency_mask
 from .core.io import save_image
 
 
@@ -65,11 +64,11 @@ def split_frequencies(
 
         if not cutoff:
             logger.error(f"[{filename}] : Cutoff frequency could not be determined. Skipping image..")
-            image_object.high_pass = None
+            image_object.success = False
             return
 
         cutoff_nm = 2 * pixel_to_nm_scaling / cutoff
-        logger.info(f"[{image_object.filename}] : Frequency cutoff: {cutoff} ({np.round(cutoff_nm, 4)}nm)")
+        logger.info(f"[{image_object.filename}] : Frequency cutoff: {round(cutoff, 4)} ({round(cutoff_nm, 4)}nm)")
 
         # Update image class with chosen cutoff
         image_object.cutoff = cutoff
@@ -286,3 +285,32 @@ def apply_cutoff(
         return 0.5 * (erf((f_grid - cutoff) / edge_width) + 1)
     else:
         return (f_grid >= cutoff).astype(np.float64)
+
+
+def create_frequency_mask(image: np.ndarray) -> np.ndarray:
+    """
+    Create a 2D grid of normalised spatial frequencies for an image.
+    Calculate the distance of each pixel from the zero frequency component
+    in the Fourier domain.
+
+    Parameters
+    ----------
+    image :np.ndarray
+        2D image to be analysed.
+
+    Returns
+    -------
+    np.ndarray
+        A 2D arrya of the same shape as the input image containing the radial
+        normalised frequencies of sqrt(fx^2 + fy^2).
+    """
+    # Create frequency mask grid
+    yres, xres = image.shape
+    xr = np.arange(xres)
+    yr = np.arange(yres)
+    fx = 2 * np.fmin(xr, xres - xr) / xres
+    fy = 2 * np.fmin(yr, yres - yr) / yres
+
+    # Full coordinate arrays
+    xx, yy = np.meshgrid(fx, fy)
+    return np.sqrt(xx**2 + yy**2)

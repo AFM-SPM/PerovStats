@@ -5,10 +5,10 @@ from loguru import logger
 import numpy as np
 from skimage.color import label2rgb
 from skimage.measure import label, regionprops
+from skimage import morphology
 
 from .core.classes import Grain, ImageData
 from .core.image_processing import normalise_array
-from .core.segmentation import tidy_border
 from .core.io import save_image
 from .smears import clean_smears
 
@@ -215,6 +215,35 @@ def find_circularity_rating(grain_area: float, grain_perimeter: float) -> float:
     """
     return (4 * np.pi * grain_area) / (grain_perimeter * grain_perimeter)
 
+
+@staticmethod
+def tidy_border(mask: np.ndarray[np.bool_]) -> np.ndarray[np.bool_]:
+    """
+    Remove whole grains touching the border.
+
+    Parameters
+    ----------
+    mask : npt.NDArray
+        3-D Numpy array of the grain mask tensor.
+
+    Returns
+    -------
+    npt.NDArray
+        3-D Numpy array of the grain mask tensor with grains touching the border removed.
+    """
+    # Find the grains that touch the border then remove them from the full mask tensor
+    mask_labelled = morphology.label(mask)
+    mask_regionprops = regionprops(mask_labelled)
+    for region in mask_regionprops:
+        if (
+            region.bbox[0] == 0
+            or region.bbox[1] == 0
+            or region.bbox[2] == mask.shape[0]
+            or region.bbox[3] == mask.shape[1]
+        ):
+            mask[mask_labelled == region.label] = 0
+
+    return mask
 
 # def find_grain_volume(mask: np.ndarray, mask_regionprop, labelled_mask: np.ndarray, grain_mask: np.ndarray, pixel_to_nm_scaling: float):
 #     # Get mask of only the grain but the same shape as the entire mask

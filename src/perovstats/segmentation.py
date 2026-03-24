@@ -3,16 +3,13 @@ from pathlib import Path
 import heapq
 
 from loguru import logger
-import numpy.typing as npt
-from skimage import morphology
-from skimage.measure import regionprops
 from scipy.ndimage import distance_transform_edt
 import skimage as ski
 import numpy as np
 
-from .io import save_image
-from .classes import ImageData
-from .image_processing import normalise_array
+from .core.io import save_image
+from .core.classes import ImageData
+from .core.image_processing import normalise_array, get_local_pixels_binary
 
 
 def segment_image(
@@ -194,8 +191,9 @@ class Skeletonisation:
         height_bias : float
             Ratio of lowest intensity (height) pixels to total pixels fitting the skeletonisation criteria.
         """
-        self.image = image
-        self.mask = np.pad(mask.copy(), pad_width=1, mode='constant', constant_values=0)
+        # Extend the image/ mask by mirroring to avoid edge effects
+        self.image = np.pad(image, pad_width=1, mode='edge')
+        self.mask = np.pad(mask, pad_width=1, mode='edge')
         self.height_bias = height_bias
 
 
@@ -211,7 +209,10 @@ class Skeletonisation:
         priority_map = self.calculate_priority_map()
         self.skeletonise_with_bias(priority_map)
 
-        self.mask = self.mask[1:-1, 1:-1] # Remove padding added in __init__() to handle edge pixels
+        # Remove padding added in __init__() to handle edge pixels
+        self.iamge = self.image[1:-1, 1:-1]
+        self.mask = self.mask[1:-1, 1:-1]
+
         return ski.morphology.skeletonize(self.mask)
 
 
@@ -231,11 +232,9 @@ class Skeletonisation:
         # Create array of shape mask.shape with score of distance from edge
         dist = distance_transform_edt(self.mask)
 
-        padded_image = np.pad(self.image, pad_width=1, mode='edge')
-
         # Normalise the heightmap
-        img_min, img_max = padded_image.min(), padded_image.max()
-        norm_height = (padded_image - img_min) / (img_max - img_min + 1e-8)
+        img_min, img_max = self.image.min(), self.image.max()
+        norm_height = (self.image - img_min) / (img_max - img_min + 1e-8)
 
         # Combine the two arrays - (1.0 - norm_height to delete lighter pixels)
         priority_map = dist + (1.0 - norm_height) * self.height_bias
@@ -293,7 +292,11 @@ class Skeletonisation:
             If the pixel is determined to be on the edge of a 'blob' and will not shrink the
             structure of the skeleton by deleting return true, else return false.
         """
-        p = self.get_local_pixels_binary(self.mask, row, col)
+        height, width = self.mask.shape
+        if row <= 0 or row >= height - 1 or col <= 0 or col >= width - 1:
+            return False
+
+        p = get_local_pixels_binary(self.mask, row, col)
         neighbours = [p[1], p[2], p[4], p[7], p[6], p[5], p[3], p[0]]
 
         # Check that the pixel is not at the end of a line or an isolated dot (num_neighbours < 2)
@@ -311,93 +314,3 @@ class Skeletonisation:
                 transitions += 1
 
         return transitions == 1
-
-
-    @staticmethod
-    def get_local_pixels_binary(binary_map: npt.NDArray, x: int, y: int) -> npt.NDArray:
-        """
-        Value of pixels in the local 8-connectivity area around the coordinate (P1) described by x and y.
-
-        P1 must not lie on the edge of the binary map.
-
-        [[p7, p8, p9],    [[0,1,2],
-         [p6, P1, p2], ->  [3,4,5], -> [0,1,2,3,5,6,7,8]
-         [p5, p4, p3]]     [6,7,8]]
-
-        delete P1 to only get local area.
-
-        Parameters
-        ----------
-        binary_map : npt.NDArray
-            Binary mask of image.
-        x : int
-            X coordinate within the binary map.
-        y : int
-            Y coordinate within the binary map.
-
-        Returns
-        -------
-        npt.NDArray
-            Flattened 8-long array describing the values in the binary map around the x,y point.
-        """
-        local_pixels = binary_map[x - 1 : x + 2, y - 1 : y + 2].flatten()
-        return np.delete(local_pixels, 4)
-
-
-@staticmethod
-def tidy_border(mask: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
-    """
-    Remove whole grains touching the border.
-
-    Parameters
-    ----------
-    mask : npt.NDArray
-        3-D Numpy array of the grain mask tensor.
-
-    Returns
-    -------
-    npt.NDArray
-        3-D Numpy array of the grain mask tensor with grains touching the border removed.
-    """
-    # Find the grains that touch the border then remove them from the full mask tensor
-    mask_labelled = morphology.label(mask)
-    mask_regionprops = regionprops(mask_labelled)
-    for region in mask_regionprops:
-        if (
-            region.bbox[0] == 0
-            or region.bbox[1] == 0
-            or region.bbox[2] == mask.shape[0]
-            or region.bbox[3] == mask.shape[1]
-        ):
-            mask[mask_labelled == region.label] = 0
-
-    return mask
-
-
-def create_frequency_mask(image: np.ndarray) -> np.ndarray:
-    """
-    Create a 2D grid of normalised spatial frequencies for an image.
-    Calculate the distance of each pixel from the zero frequency component
-    in the Fourier domain.
-
-    Parameters
-    ----------
-    image :np.ndarray
-        2D image to be analysed.
-
-    Returns
-    -------
-    np.ndarray
-        A 2D arrya of the same shape as the input image containing the radial
-        normalised frequencies of sqrt(fx^2 + fy^2).
-    """
-    # Create frequency mask grid
-    yres, xres = image.shape
-    xr = np.arange(xres)
-    yr = np.arange(yres)
-    fx = 2 * np.fmin(xr, xres - xr) / xres
-    fy = 2 * np.fmin(yr, yres - yr) / yres
-
-    # Full coordinate arrays
-    xx, yy = np.meshgrid(fx, fy)
-    return np.sqrt(xx**2 + yy**2)
