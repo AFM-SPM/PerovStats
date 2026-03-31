@@ -8,8 +8,7 @@ import pandas as pd
 
 from .core.classes import ImageData, PerovStats
 from .core.io import save_to_csv, save_config
-from .segmentation import segment_image
-from .filters import run_filters
+from .segmentation import segment_image, segment_image_cellpose
 from .grains import find_grains
 from .fourier import split_frequencies
 from .smears import find_smear_areas
@@ -38,7 +37,7 @@ def process(
 
     # Load scans
     load_config = config["loading"]
-    loadscans = LoadScans(img_files, **load_config)
+    loadscans = LoadScans(img_files, config)
     try:
         loadscans.get_data()
     except ValueError as e:
@@ -52,8 +51,8 @@ def process(
         image_data = ImageData(
             success=True,
             filename=filename,
-            pixel_to_nm_scaling=topostats_object["pixel_to_nm_scaling"],
-            image_original=topostats_object["image_original"],
+            pixel_to_nm_scaling=topostats_object.pixel_to_nm_scaling,
+            image_original=topostats_object.image_original,
             image_flattened=None)
         perovstats_object.images.append(image_data)
 
@@ -67,9 +66,6 @@ def process(
         logger.debug(f"[{image_object.filename}] : Image dimensions: {image_object.image_original.shape}")
         logger.debug(f"[{image_object.filename}] : pixel_to_nm_scaling: {image_object.pixel_to_nm_scaling}")
 
-        # Filter image
-        run_filters(perovstats_object.config, image_object)
-
         # Apply fourier transform to split the image into a low-passed and high-passed image
         split_frequencies(perovstats_object.config, image_object)
 
@@ -78,8 +74,9 @@ def process(
             continue
 
         # Generate grain mask of the high-passed image
-        segment_image(perovstats_object.config, image_object)
+        segment_image_cellpose(perovstats_object.config, image_object)
 
+        # Remove small offshoots in the mask and connect sections with small breaks
         prune_mask(perovstats_object.config, image_object)
 
         # Find smear areas to be ignored/ removed

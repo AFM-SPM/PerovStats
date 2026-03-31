@@ -26,6 +26,7 @@ def prune_mask(config, image_object: ImageData) -> None:
     output_dir = Path(config["output_dir"])
     config = config["pruning"]
     if config["run"]:
+        og_mask = image_object.mask.copy()
         logger.info(f"[{image_object.filename}] : *** Pruning ***")
         min_line_length = config["min_line_length"]
         max_connecting_dist = config["max_connecting_dist"]
@@ -50,18 +51,19 @@ def prune_mask(config, image_object: ImageData) -> None:
                     # for point in line:
                     #     end_pixels[point] = 1
                     line_length = len(line)
-                    if line_length < min_line_length:
+                    if line_length > min_line_length:
                         # Get shortest forwards to connect line to mask
                         connection_path = get_connection_path(mask, dist_map, (row, col), line, max_connecting_dist)
                         connection_dist = len(connection_path)
-                        # If the connection distance is too long, delete the line
-                        if connection_dist > max_connecting_dist:
-                            for coords in line:
-                                mask[coords] = False
-                        # If the connection distance is short enough then fill in the found path
-                        else:
+                        if connection_dist < max_connecting_dist:
+                            # If the connection distance is short enough then fill in the found path
                             for coords in connection_path:
-                                mask[coords] = True
+                                # mask[coords] = True
+                                pass
+                    else:
+                        # If the connection distance is too short, delete the line
+                        for coords in line:
+                            mask[coords] = False
 
         image_object.mask = mask
 
@@ -70,12 +72,12 @@ def prune_mask(config, image_object: ImageData) -> None:
             for col in range(1, width-1):
                 if end_pixels[row, col] == 2:
                     endpoints += 1
-        print("Endpoints found:", endpoints)
 
         fname = image_object.filename
         # Convert to image format and save
         img_dir = Path(output_dir) / fname / "images"
         save_image(mask, img_dir, f"{fname}_mask_pruning_yes.jpg")
+        save_image(og_mask, img_dir, f"{fname}_mask_pruning_no.jpg")
         save_image(end_pixels, img_dir, f"{fname}_mask_endpoints.jpg")
 
 
@@ -288,7 +290,7 @@ def get_connection_path_old(mask: np.ndarray, dist_map: np.ndarray, endpoint: tu
 
 def get_connection_path(mask: np.ndarray, dist_map: np.ndarray, endpoint: tuple, line: list[tuple], max_dist: int) -> tuple:
     """
-    Find the shortest path forwards from the end of the line to the next section of mask
+    Find the shortest path forwards from the end of the offshoot line to the next section of mask
     using an A* pathfinding algorithm.
     The algorithm starts from the endpoint and is prevented from connecting back into
     the original line.
@@ -311,11 +313,10 @@ def get_connection_path(mask: np.ndarray, dist_map: np.ndarray, endpoint: tuple,
     height, width = mask.shape
     line_set = set(line)
 
-    # 1. Calculate the 'Entry Vector' (Direction of the line)
-    # We look at the last 2 points of the line to see which way it's pointing
+    # Get direction of end of offshoot by comparing the last two pixels in the line
     if len(line) >= 2:
-        last = np.array(line[-1])      # The endpoint
-        penultimate = np.array(line[-2]) # The pixel before it
+        last = np.array(line[-1])
+        penultimate = np.array(line[-2])
         entry_vector = last - penultimate
     else:
         entry_vector = np.array([0, 0]) # No bias if the line is only 1 pixel
@@ -324,6 +325,7 @@ def get_connection_path(mask: np.ndarray, dist_map: np.ndarray, endpoint: tuple,
     queue = [(dist_map[endpoint], 0, endpoint, [])]
     visited = {endpoint}
 
+    # A* pathfinding for connecting
     while queue:
         _, cost, curr, path = heapq.heappop(queue)
 
@@ -348,17 +350,13 @@ def get_connection_path(mask: np.ndarray, dist_map: np.ndarray, endpoint: tuple,
 
                     visited.add(neighbor)
 
-                    # 2. Calculate the 'New Step Vector'
                     step_vector = np.array([dr, dc])
 
-                    # 3. Apply the Penalty
-                    # Dot product tells us if we are moving in the same direction.
-                    # Positive = same direction, Negative = turning back.
+                    # Get dot product of starting and current vector.
+                    # Positive is still forwards, negative means turning back.
+                    # Punish backwards movement
                     dot_product = np.dot(entry_vector, step_vector)
-
-                    # If dot_product < 0, we are turning back.
-                    # We add a 'Turn Penalty' to the cost to discourage it.
-                    turn_penalty = 5.0 if dot_product < 0 else 0.0
+                    turn_penalty = (-dot_product * 15) if dot_product < 0 else 0.0
 
                     step_cost = 1.414 if (dr != 0 and dc != 0) else 1.0
                     new_cost = cost + step_cost + turn_penalty

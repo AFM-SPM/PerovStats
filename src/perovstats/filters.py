@@ -33,3 +33,4 @@ def run_filters(
             **_filter_config,
         )
         filters.filter_image()
+        image_object.image_flattened = filters.images["gaussian_filtered"]

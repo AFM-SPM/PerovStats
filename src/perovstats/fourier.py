@@ -55,11 +55,11 @@ def split_frequencies(
 
         cutoff = find_cutoff(
             image_object,
-            edge_width,
+            edge_width=edge_width,
             min_cutoff=min_cutoff,
             max_cutoff=max_cutoff,
             min_rms=min_rms,
-            pixel_to_nm_scaling=pixel_to_nm_scaling,
+            pixel_to_nm_scaling=pixel_to_nm_scaling
         )
 
         if not cutoff:
@@ -80,6 +80,9 @@ def split_frequencies(
             cutoff=cutoff,
             edge_width=edge_width,
         )
+        # high_pass, low_pass = apply_brick_wall_highpass(image, cutoff_px=cutoff)
+
+        high_pass = remove_extremes(high_pass)
 
         image_object.high_pass = high_pass
         image_object.low_pass = low_pass
@@ -87,12 +90,12 @@ def split_frequencies(
 
         # Convert high-pass and low-pass to image format
         arr = high_pass
-        arr = normalise_array(arr)
+        # arr = normalise_array(arr)
         img_dir = Path(file_output_dir) / "images"
         save_image(arr, img_dir, f"{filename}_high_pass.jpg", cmap="grey")
 
         arr = low_pass
-        arr = normalise_array(arr)
+        # arr = normalise_array(arr)
         save_image(arr, img_dir, f"{filename}_low_pass.jpg", cmap="grey")
     else:
         logger.info(f"[{image_object.filename}] : Frequency splitting is disabled by config, the original image will be used.")
@@ -314,3 +317,10 @@ def create_frequency_mask(image: np.ndarray) -> np.ndarray:
     # Full coordinate arrays
     xx, yy = np.meshgrid(fx, fy)
     return np.sqrt(xx**2 + yy**2)
+
+
+def remove_extremes(high_pass):
+    mean = np.mean(high_pass)
+    std = np.std(high_pass)
+    high_pass_clamped = np.clip(high_pass, mean - 3*std, mean + 3*std)
+    return high_pass_clamped

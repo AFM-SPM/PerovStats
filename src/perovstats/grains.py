@@ -11,6 +11,7 @@ from .core.classes import Grain, ImageData
 from .core.image_processing import normalise_array
 from .core.io import save_image
 from .smears import clean_smears
+from .statistics import grain_area_histogram, grain_circularity_histogram
 
 
 def find_grains(
@@ -47,7 +48,11 @@ def find_grains(
     labelled_mask = label(mask, connectivity=1)
 
     # Remove grains touching the edge
-    labelled_mask = tidy_border(labelled_mask)
+    min_dist_from_edge = 4
+    labelled_mask = tidy_border(labelled_mask, min_dist_from_edge)
+
+    max_size = 25
+    labelled_mask = remove_small_grains(labelled_mask, max_size)
 
     # Remove grains in/ touching smears
     if config["remove_smears"]["run"]:
@@ -103,8 +108,10 @@ def find_grains(
     for key, value in mask_data.items():
         setattr(image_object, key, value)
     image_object.grains = {}
+    circularity_data = []
     for i, grain_area in enumerate(mask_areas):
         grain_circularity = find_circularity_rating(grain_area, mask_perimeters[i])
+        circularity_data.append(grain_circularity)
         # grain_volume = find_grain_volume(mask, mask_regionprops[i], labelled_mask, mask_images[i], pixel_to_nm_scaling)
         image_object.grains[i] = Grain(
             grain_id=i,
@@ -123,6 +130,7 @@ def find_grains(
 
     # Save high-pass with mask skeleton overlay and an image colouring grains individually
     mask_rgb = mask_data["mask_rgb"]
+    image_object.mask_rgb = mask_rgb
     save_dir = Path(config_yaml["output_dir"]) / filename / "images"
     save_image(mask_rgb, save_dir, f"{filename}_rgb_grains.jpg", cmap=None)
     smear_overlay = np.stack((image_object.high_pass,)*3, axis=-1)
@@ -131,6 +139,12 @@ def find_grains(
     smear_overlay[mask_2d == 0] = [1, 1, 1]
     smear_overlay[image_object.smears == 1] = [1, 0, 0]
     save_image(smear_overlay, save_dir, f"{filename}_smears.jpg")
+
+    image_object.mask_areas = mask_areas
+    image_object.circularity_data = circularity_data
+
+    grain_area_histogram(mask_areas, filename, save_dir)
+    grain_circularity_histogram(circularity_data, filename, save_dir)
 
 
 def find_median_grain_area(values: list[float]) -> float:
@@ -216,8 +230,12 @@ def find_circularity_rating(grain_area: float, grain_perimeter: float) -> float:
     return (4 * np.pi * grain_area) / (grain_perimeter * grain_perimeter)
 
 
+def remove_small_grains(mask, max_size):
+    return morphology.remove_small_objects(mask.astype(int), max_size=max_size)
+
+
 @staticmethod
-def tidy_border(mask: np.ndarray[np.bool_]) -> np.ndarray[np.bool_]:
+def tidy_border(mask: np.ndarray[np.bool_], min_dist) -> np.ndarray[np.bool_]:
     """
     Remove whole grains touching the border.
 
@@ -231,15 +249,16 @@ def tidy_border(mask: np.ndarray[np.bool_]) -> np.ndarray[np.bool_]:
     npt.NDArray
         3-D Numpy array of the grain mask tensor with grains touching the border removed.
     """
-    # Find the grains that touch the border then remove them from the full mask tensor
+    # Find the grains that touch the border/ nearly touch the border then remove them from the full mask tensor
+    # It is required to include grains almost touching the border here as the cellpose model can sometimes make straight grains
     mask_labelled = morphology.label(mask)
     mask_regionprops = regionprops(mask_labelled)
     for region in mask_regionprops:
         if (
-            region.bbox[0] == 0
-            or region.bbox[1] == 0
-            or region.bbox[2] == mask.shape[0]
-            or region.bbox[3] == mask.shape[1]
+            region.bbox[0] < min_dist
+            or region.bbox[1] < min_dist
+            or region.bbox[2] > mask.shape[0] - min_dist
+            or region.bbox[3] > mask.shape[1] - min_dist
         ):
             mask[mask_labelled == region.label] = 0
 

@@ -6,10 +6,76 @@ from loguru import logger
 from scipy.ndimage import distance_transform_edt
 import skimage as ski
 import numpy as np
+from cellpose import models, core
+from cellpose import utils as cellposeutils
+import cv2
 
 from .core.io import save_image
 from .core.classes import ImageData
 from .core.image_processing import normalise_array, get_local_pixels_binary
+
+
+def segment_image_cellpose(config: dict[str, any], image_object: ImageData):
+    logger.info(f"[{image_object.filename}] : *** Mask creation ***")
+    logger.info(f"[{image_object.filename}] : Creating grain mask")
+
+    pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
+
+    # Skeletonisation config option
+    height_bias = config["segmentation"]["height_bias"]
+    grain_diam_nm = config["segmentation"]["grain_diam_nm"]
+
+    output_dir = Path(config["output_dir"])
+    fname = image_object.filename
+
+    # If a GPU is available on the device use it, if not then the CPU will be used instead (much slower)
+    use_gpu = core.use_gpu()
+    if not use_gpu:
+        logger.warning(f"[{image_object.filename}] : No GPU detected, CPU is being used for segmentation. This may take a few minutes..")
+
+    model = models.CellposeModel(gpu=use_gpu)
+
+    diameter = grain_diam_nm / pixel_to_nm_scaling
+
+    if diameter < 40:
+        diameter = diameter * 2
+
+    # Parameters:
+    # diameter: the px diameter of a grain. As grain sizes differ aim for an average value
+    # flow_threshold: How sensitive the segmentation should be. Higher values create more grains, lower values reduce
+    # cellprob_threshold: Threshold to mark area as grain based on the probability it is one.
+    masks, flows, styles = model.eval(
+        image_object.high_pass,
+        diameter=diameter,
+        flow_threshold=0.8,
+        cellprob_threshold=-1,
+        resample=False,
+        min_size=10,
+    )
+
+    logger.info(f"[{image_object.filename}] : Mask created, Returning image to original size.")
+    # Return mask to original shape after model resizing
+    if masks.shape != image_object.high_pass.shape:
+        masks = cv2.resize(masks.astype(np.float32),
+                        (image_object.high_pass.shape[1], image_object.high_pass.shape[0]),
+                        interpolation=cv2.INTER_NEAREST).astype(np.uint16)
+
+    outlines = cellposeutils.masks_to_outlines(masks)
+    mask = outlines.astype(np.uint16)
+    np_mask = Skeletonisation(image_object.high_pass, mask, height_bias=height_bias).do_skeletonisation()
+
+    image_object.mask = np_mask
+
+    # Convert to image format and save
+    img_dir = Path(output_dir) / fname / "images"
+    save_image(np_mask, img_dir, f"{fname}_mask.jpg")
+
+    # Save high-pass with mask skeleton
+    high_pass = image_object.high_pass
+    rgb_highpass = np.stack((high_pass,)*3, axis=-1)
+    rgb_highpass = normalise_array(rgb_highpass)
+    rgb_highpass[np_mask > 0] = [1, 0, 0]
+    save_image(rgb_highpass, img_dir, f"{fname}_mask_overlay.jpg")
 
 
 def segment_image(
@@ -35,14 +101,13 @@ def segment_image(
         fname = image_object.filename
         im = image_object.high_pass
         pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
-
         config = config["segmentation"]
 
         # Scale threshold block size with image scaling and round to nearest odd integer
         threshold_block_size = config["threshold_block_size"] / pixel_to_nm_scaling
         threshold_block_size = 2 * round((threshold_block_size - 1) / 2) + 1
 
-        threshold_offset = config["threshold_offset"]
+        threshold_offset = config["threshold_offset"] - (pixel_to_nm_scaling / 10)
 
         # Cleaning config options - adjusted for pixel to nm scaling
         area_threshold = config["cleaning"]["area_threshold"]
@@ -63,6 +128,7 @@ def segment_image(
         logger.info(f"[{image_object.filename}] : *** Mask creation ***")
         logger.info(f"[{image_object.filename}] : Creating grain mask")
         # Create the grain mask by thresholding the image and skeletonising the result
+
         np_mask = create_grain_mask(
             im,
             threshold_block_size=threshold_block_size,
@@ -110,7 +176,7 @@ def clean_mask(
         Cleaned up mask array.
     """
     mask = ski.morphology.remove_small_holes(
-        ski.morphology.remove_small_objects(mask, max_size=area_threshold)
+        ski.morphology.remove_small_objects(mask.astype(int), max_size=area_threshold)
     )
     return ski.morphology.opening(mask, ski.morphology.disk(disk_radius))
 
@@ -150,10 +216,16 @@ def create_grain_mask(
     np.ndarray
         Skeletonised mask of grain borders.
     """
-    im_ = ski.filters.gaussian(im, sigma=smooth_sigma)
+    # Remove extremes
+    p5, p95 = np.percentile(im, [30, 70])
+    im = np.clip(im, p5, p95)
+
+    im_ = ski.filters.difference_of_gaussians(im, low_sigma=1, high_sigma=3)
+    # im_ = ski.filters.gaussian(im, sigma=smooth_sigma)
     # Get an array of thresholds for each pixel
-    local_thresh = ski.filters.threshold_local(im_, block_size=threshold_block_size, offset=threshold_offset)
-    mask = im_ > local_thresh
+    threshold = ski.filters.threshold_local(im_, block_size=threshold_block_size, offset=threshold_offset)
+    # threshold = ski.filters.threshold_otsu(im_)
+    mask = im_ > threshold
     mask = clean_mask(mask, area_threshold, disk_radius) if area_threshold else mask
     selection = ski.util.invert(mask)
     skeleton = Skeletonisation(im_, selection, height_bias=height_bias).do_skeletonisation()

@@ -125,6 +125,8 @@ class ImageData:
     mode_grain_area: float | None = None
     pixel_to_nm_scaling: float | None = None
     threshold: float | None = None
+    mask_areas: list | None = None
+    circularity_data: list | None = None
 
     def to_dict(self) -> dict:
         """

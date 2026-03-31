@@ -27,26 +27,27 @@ filter:
     min_scar_length: 16 # Minimum length of scars in pixels.
 freqsplit:
   run: true
-  edge_width: 0.1 # Width of borders of grains
-  cutoff_bounds: [0, 0.2] # Minimum and maximum cutoff points for frequency splitting.
-  min_rms: 11 # Minimum roughness mean score of a high-pass after splitting along the cutoff.
+  edge_width: 0.03 # Width of the cutoff in frequency when performing the fourier split, as a fraction of the total frequency range. Higher values make the split less sensitive to cutoff choice.
+  cutoff_bounds: [0, 0.3] # Minimum and maximum cutoff points for frequency splitting.
+  min_rms: 10 # Minimum roughness mean score of a high-pass after splitting along the cutoff.
 segmentation:
   smoothing:
-    sigma: 8
-  threshold_offset: 0.5 # Amount to change the calculated threshold by for segmentation. Lower thresholds increase sentitivity.
-  threshold_block_size: 800 # Size of each block for local thresholding. Lower values increase segmentation sensitivity.
+    sigma: 2
+  threshold_offset: 1.5 # Amount to change the calculated threshold by for segmentation. Lower thresholds increase sentitivity.
+  threshold_block_size: 100000 # Size of each block for local thresholding. Lower values increase segmentation sensitivity.
   cleaning:
     area_threshold: 10000 # in nm2.
-    disk_radius_factor: 40
+    disk_radius_factor: 20
   height_bias: 100 # The amount to prioritise lower pixels to the centre when skeletonising a mask.
+  grain_diam_nm: 450 # The average diameter of a perovskite grain
 pruning:
-  run: false
-  min_line_length: 10
-  max_connecting_dist: 4
+  run: true
+  min_line_length: 5
+  max_connecting_dist: 10
 remove_smears:
     run: true
     smooth_sigma: 1 # How much to smooth the high pass image before comparing gradients
-    smear_threshold: 1.8 # Minimum value for y gradient / x gradient in the high pass image, meaning possible smear
+    smear_threshold: 1.9 # Minimum value for y gradient / x gradient in the high pass image, meaning possible smear
     min_smear_size: 175 # in px^2, areas under this value are removed and ignored
     min_smear_area_percent: 6 # Minimum number of identified smear sections to not discount smear removal. If less they are considered to be in error.
-    lowpass_threshold: 95 # Minimum horizontal gradient in the low pass image to be marked
+    lowpass_threshold: 110 # Minimum horizontal gradient in the low pass image to be marked
