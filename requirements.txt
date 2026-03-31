@@ -12,6 +12,7 @@ black==25.12.0
 bleach==6.3.0
 build==1.4.0
 CacheControl==0.14.4
+cellpose==4.1.1
 certifi==2026.1.4
 cfgv==3.5.0
 charset-normalizer==3.4.4
@@ -30,10 +31,13 @@ dulwich==0.24.10
 et_xmlfile==2.0.0
 executing==2.2.1
 fastjsonschema==2.21.2
+fastremap==1.18.0
 filelock==3.20.3
+fill_voids==2.1.1
 findpython==0.7.1
 flatbuffers==25.12.19
 fonttools==4.61.1
+fsspec==2026.3.0
 gast==0.7.0
 google-pasta==0.2.0
 grpcio==1.76.0
@@ -44,6 +48,7 @@ httpx==0.28.1
 identify==2.6.16
 idna==3.11
 igor2==0.5.12
+imagecodecs==2026.3.6
 ImageIO==2.37.2
 importlib_metadata==8.7.1
 iniconfig==2.3.0
@@ -78,11 +83,13 @@ mdurl==0.1.2
 mistune==3.2.0
 ml_dtypes==0.5.4
 more-itertools==10.8.0
+mpmath==1.3.0
 msgpack==1.1.2
 mypy==1.19.1
 mypy_extensions==1.1.0
 namex==0.1.0
 narwhals==2.15.0
+natsort==8.4.0
 nbclient==0.10.4
 nbconvert==7.16.6
 nbformat==5.10.4
@@ -92,6 +99,7 @@ numba==0.63.1
 numpy==2.0.2
 numpyencoder==0.3.2
 opencv-python==4.12.0.88
+opencv-python-headless==4.13.0.92
 openpyxl==3.1.5
 opt_einsum==3.4.0
 optree==0.18.0
@@ -132,6 +140,7 @@ referencing==0.37.0
 requests==2.32.5
 requests-toolbelt==1.0.0
 rich==14.2.0
+roifile==2026.2.10
 rpds-py==0.30.0
 ruamel.yaml==0.19.1
 ruff==0.14.11
@@ -140,6 +149,7 @@ scikit-image==0.26.0
 scikit-learn==1.8.0
 scipy==1.17.0
 seaborn==0.13.2
+segment-anything==1.0
 shellingham==1.5.4
 six==1.17.0
 skan==0.13.0
@@ -147,6 +157,7 @@ snoop==0.6.0
 soupsieve==2.8.1
 stack-data==0.6.3
 superqt==0.7.7
+sympy==1.14.0
 tensorboard==2.20.0
 tensorboard-data-server==0.7.2
 tensorflow==2.20.0
@@ -157,7 +168,9 @@ tinycss2==1.4.0
 tomlkit==0.14.0
 toolz==1.1.0
 topoly==1.1.0
-topostats==2.3.2
+topostats==2.4.0
+torch==2.11.0
+torchvision==0.26.0
 tornado==6.5.4
 tqdm==4.67.1
 traitlets==5.14.3
