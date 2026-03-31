@@ -54,8 +54,9 @@ class ImageData:
 
     Parameters
     ----------
-    topostats_object : any
-        TopoStats object generated and used by the filtering stage.
+    success : bool
+        Boolean value, True if all steps completed so far have been successful.
+        If False, next steps are not run as data may be missing.
     mask : np.ndarray
         Boolean mask showing grain outlines.
     high_pass : np.ndarray
@@ -99,6 +100,7 @@ class ImageData:
     pixel_to_nm_scaling : float
         Image scaling of pixels to nm.
     """
+    success: bool | None = None
     image_original: np.ndarray | None = None
     image_flattened: np.ndarray | None = None
     mask: np.ndarray | None = None
@@ -123,6 +125,8 @@ class ImageData:
     mode_grain_area: float | None = None
     pixel_to_nm_scaling: float | None = None
     threshold: float | None = None
+    mask_areas: list | None = None
+    circularity_data: list | None = None
 
     def to_dict(self) -> dict:
         """

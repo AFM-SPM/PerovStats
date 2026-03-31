@@ -1,11 +1,9 @@
 import numpy as np
 
-from perovstats.core.segmentation import (
+from perovstats.segmentation import (
     segment_image,
     clean_mask,
-    create_grain_mask,
-    create_frequency_mask,
-    tidy_border
+    create_grain_mask
 )
 from perovstats.core.classes import PerovStats
 
@@ -38,26 +36,3 @@ def test_clean_mask(dummy_mask: np.ndarray) -> None:
     x = clean_mask(dummy_mask)
     assert x.shape == dummy_mask.shape
     assert x.dtype == np.dtype(bool)
-
-
-def test_create_frequency_mask(dummy_original_image) -> None:
-    shape = dummy_original_image.shape
-
-    freq_grid = create_frequency_mask(dummy_original_image)
-
-    assert freq_grid.shape == shape
-    assert freq_grid[0,0] == 0.0
-    assert np.isclose(freq_grid[0,1], freq_grid[0,-1])
-    assert np.isclose(freq_grid[1,0], freq_grid[-1,0])
-    half_shape = (round(shape[0]/2), round(shape[1]/2))
-    assert np.isclose(freq_grid[0,half_shape[1]], 1.0)
-    assert np.isclose(freq_grid[half_shape[0],0], 1.0)
-    assert np.isclose(freq_grid[half_shape[0],half_shape[1]], np.sqrt(2))
-
-
-def test_tidy_borders(dummy_mask: np.ndarray):
-    mask = dummy_mask
-    new_mask = tidy_border(mask)
-
-    assert new_mask.shape == mask.shape
-    assert new_mask.dtype == mask.dtype

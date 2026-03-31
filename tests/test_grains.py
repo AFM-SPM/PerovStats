@@ -7,7 +7,8 @@ from perovstats.grains import (
     find_median_grain_area,
     find_mean_grain_area,
     find_mode_grain_area,
-    find_circularity_rating
+    find_circularity_rating,
+    tidy_border
 )
 
 def test_find_grains(dummy_perovstats_object):
@@ -83,3 +84,11 @@ def test_find_circularity_rating(grain_mask, expected_rating):
     circularity_rating = find_circularity_rating(area, perimeter)
 
     assert circularity_rating == expected_rating
+
+
+def test_tidy_borders(dummy_mask: np.ndarray):
+    mask = dummy_mask
+    new_mask = tidy_border(mask)
+
+    assert new_mask.shape == mask.shape
+    assert new_mask.dtype == mask.dtype

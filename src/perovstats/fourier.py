@@ -10,7 +10,6 @@ from scipy.optimize import bisect
 
 from .core.classes import ImageData
 from .core.image_processing import extend_image, normalise_array
-from .core.segmentation import create_frequency_mask
 from .core.io import save_image
 
 
@@ -56,20 +55,20 @@ def split_frequencies(
 
         cutoff = find_cutoff(
             image_object,
-            edge_width,
+            edge_width=edge_width,
             min_cutoff=min_cutoff,
             max_cutoff=max_cutoff,
             min_rms=min_rms,
-            pixel_to_nm_scaling=pixel_to_nm_scaling,
+            pixel_to_nm_scaling=pixel_to_nm_scaling
         )
 
         if not cutoff:
             logger.error(f"[{filename}] : Cutoff frequency could not be determined. Skipping image..")
-            image_object.high_pass = None
+            image_object.success = False
             return
 
         cutoff_nm = 2 * pixel_to_nm_scaling / cutoff
-        logger.info(f"[{image_object.filename}] : Frequency cutoff: {cutoff} ({np.round(cutoff_nm, 4)}nm)")
+        logger.info(f"[{image_object.filename}] : Frequency cutoff: {round(cutoff, 4)} ({round(cutoff_nm, 4)}nm)")
 
         # Update image class with chosen cutoff
         image_object.cutoff = cutoff
@@ -81,6 +80,9 @@ def split_frequencies(
             cutoff=cutoff,
             edge_width=edge_width,
         )
+        # high_pass, low_pass = apply_brick_wall_highpass(image, cutoff_px=cutoff)
+
+        high_pass = remove_extremes(high_pass)
 
         image_object.high_pass = high_pass
         image_object.low_pass = low_pass
@@ -88,12 +90,12 @@ def split_frequencies(
 
         # Convert high-pass and low-pass to image format
         arr = high_pass
-        arr = normalise_array(arr)
+        # arr = normalise_array(arr)
         img_dir = Path(file_output_dir) / "images"
         save_image(arr, img_dir, f"{filename}_high_pass.jpg", cmap="grey")
 
         arr = low_pass
-        arr = normalise_array(arr)
+        # arr = normalise_array(arr)
         save_image(arr, img_dir, f"{filename}_low_pass.jpg", cmap="grey")
     else:
         logger.info(f"[{image_object.filename}] : Frequency splitting is disabled by config, the original image will be used.")
@@ -286,3 +288,39 @@ def apply_cutoff(
         return 0.5 * (erf((f_grid - cutoff) / edge_width) + 1)
     else:
         return (f_grid >= cutoff).astype(np.float64)
+
+
+def create_frequency_mask(image: np.ndarray) -> np.ndarray:
+    """
+    Create a 2D grid of normalised spatial frequencies for an image.
+    Calculate the distance of each pixel from the zero frequency component
+    in the Fourier domain.
+
+    Parameters
+    ----------
+    image :np.ndarray
+        2D image to be analysed.
+
+    Returns
+    -------
+    np.ndarray
+        A 2D arrya of the same shape as the input image containing the radial
+        normalised frequencies of sqrt(fx^2 + fy^2).
+    """
+    # Create frequency mask grid
+    yres, xres = image.shape
+    xr = np.arange(xres)
+    yr = np.arange(yres)
+    fx = 2 * np.fmin(xr, xres - xr) / xres
+    fy = 2 * np.fmin(yr, yres - yr) / yres
+
+    # Full coordinate arrays
+    xx, yy = np.meshgrid(fx, fy)
+    return np.sqrt(xx**2 + yy**2)
+
+
+def remove_extremes(high_pass):
+    mean = np.mean(high_pass)
+    std = np.std(high_pass)
+    high_pass_clamped = np.clip(high_pass, mean - 3*std, mean + 3*std)
+    return high_pass_clamped

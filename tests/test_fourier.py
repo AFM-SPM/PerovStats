@@ -6,7 +6,8 @@ from perovstats.fourier import (
     perform_fourier,
     find_cutoff,
     split_frequencies,
-    apply_cutoff
+    apply_cutoff,
+    create_frequency_mask
 )
 
 
@@ -53,23 +54,21 @@ def test_perform_fourier(dummy_original_image: np.ndarray):
 
 
 @pytest.mark.parametrize(
-    ("edge_width", "min_cutoff", "max_cutoff", "cutoff_step", "min_rms", "pixel_to_nm_scaling", "expected"),
+    ("edge_width", "min_cutoff", "max_cutoff", "min_rms", "pixel_to_nm_scaling", "expected"),
     [
         pytest.param(
             0.03,
             0,
             10,
-            1,
             0,
             1,
-            1,
+            1.2982177734375,
             id="Successful cutoff calculation"
         ),
         pytest.param(
             0.03,
             0,
             10,
-            1,
             1000,
             1,
             None,
@@ -82,7 +81,6 @@ def test_find_cutoff(
     edge_width: float,
     min_cutoff: float,
     max_cutoff: float,
-    cutoff_step: float,
     min_rms: float,
     pixel_to_nm_scaling: float,
     expected: float | None,
@@ -93,7 +91,6 @@ def test_find_cutoff(
         edge_width=edge_width,
         min_cutoff=min_cutoff,
         max_cutoff=max_cutoff,
-        cutoff_step=cutoff_step,
         min_rms=min_rms,
         pixel_to_nm_scaling=pixel_to_nm_scaling
     )
@@ -127,3 +124,18 @@ def test_apply_cutoff_soft_threshold() -> None:
     # Find midpoint and ensure the value is ~0.5
     idx = np.unravel_index(np.argmin(np.abs(f_grid - cutoff)), f_grid.shape)
     assert np.isclose(mask[idx], 0.5, atol=0.1)
+
+
+def test_create_frequency_mask(dummy_original_image) -> None:
+    shape = dummy_original_image.shape
+
+    freq_grid = create_frequency_mask(dummy_original_image)
+
+    assert freq_grid.shape == shape
+    assert freq_grid[0,0] == 0.0
+    assert np.isclose(freq_grid[0,1], freq_grid[0,-1])
+    assert np.isclose(freq_grid[1,0], freq_grid[-1,0])
+    half_shape = (round(shape[0]/2), round(shape[1]/2))
+    assert np.isclose(freq_grid[0,half_shape[1]], 1.0)
+    assert np.isclose(freq_grid[half_shape[0],0], 1.0)
+    assert np.isclose(freq_grid[half_shape[0],half_shape[1]], np.sqrt(2))

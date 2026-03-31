@@ -113,3 +113,33 @@ def extend_image(
     )
 
     return extended_image, extent
+
+
+def get_local_pixels_binary(binary_map: np.ndarray, x: int, y: int) -> np.ndarray:
+        """
+        Value of pixels in the local 8-connectivity area around the coordinate (P1) described by x and y.
+
+        P1 must not lie on the edge of the binary map.
+
+        [[p7, p8, p9],    [[0,1,2],
+         [p6, P1, p2], ->  [3,4,5], -> [0,1,2,3,5,6,7,8]
+         [p5, p4, p3]]     [6,7,8]]
+
+        delete P1 to only get local area.
+
+        Parameters
+        ----------
+        binary_map : npt.NDArray
+            Binary mask of image.
+        x : int
+            X coordinate within the binary map.
+        y : int
+            Y coordinate within the binary map.
+
+        Returns
+        -------
+        npt.NDArray
+            Flattened 8-long array describing the values in the binary map around the x,y point.
+        """
+        local_pixels = binary_map[x - 1 : x + 2, y - 1 : y + 2].flatten()
+        return np.delete(local_pixels, 4)

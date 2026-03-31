@@ -8,11 +8,11 @@ import pandas as pd
 
 from .core.classes import ImageData, PerovStats
 from .core.io import save_to_csv, save_config
-from .core.segmentation import segment_image
-from .filters import run_filters
+from .segmentation import segment_image, segment_image_cellpose
 from .grains import find_grains
 from .fourier import split_frequencies
 from .smears import find_smear_areas
+from .pruning import prune_mask
 
 
 def process(
@@ -37,7 +37,7 @@ def process(
 
     # Load scans
     load_config = config["loading"]
-    loadscans = LoadScans(img_files, **load_config)
+    loadscans = LoadScans(img_files, config)
     try:
         loadscans.get_data()
     except ValueError as e:
@@ -49,9 +49,10 @@ def process(
     perovstats_object = PerovStats(config=config, images=[])
     for filename, topostats_object in image_dicts.items():
         image_data = ImageData(
+            success=True,
             filename=filename,
-            pixel_to_nm_scaling=topostats_object["pixel_to_nm_scaling"],
-            image_original=topostats_object["image_original"],
+            pixel_to_nm_scaling=topostats_object.pixel_to_nm_scaling,
+            image_original=topostats_object.image_original,
             image_flattened=None)
         perovstats_object.images.append(image_data)
 
@@ -65,18 +66,18 @@ def process(
         logger.debug(f"[{image_object.filename}] : Image dimensions: {image_object.image_original.shape}")
         logger.debug(f"[{image_object.filename}] : pixel_to_nm_scaling: {image_object.pixel_to_nm_scaling}")
 
-        # Filter image
-        run_filters(perovstats_object.config, image_object)
-
         # Apply fourier transform to split the image into a low-passed and high-passed image
         split_frequencies(perovstats_object.config, image_object)
 
         # If frequency splitting was run and failed skip processing on the rest of the image
-        if image_object.high_pass is None:
+        if not image_object.success:
             continue
 
         # Generate grain mask of the high-passed image
-        segment_image(perovstats_object.config, image_object)
+        segment_image_cellpose(perovstats_object.config, image_object)
+
+        # Remove small offshoots in the mask and connect sections with small breaks
+        prune_mask(perovstats_object.config, image_object)
 
         # Find smear areas to be ignored/ removed
         find_smear_areas(perovstats_object.config, image_object)
@@ -124,6 +125,9 @@ def completion_message(perovstats_object: PerovStats, time_taken: str, time_per_
         The formatted average time taken per image during the process. This is required as a parameter
         as it must be calculated before the total time is formatted.
     """
+    successful_no = sum(image.success for image in perovstats_object.images)
+    success_perc = round((successful_no / len(perovstats_object.images)) * 100, 2)
+
     logger.success("Process completed successfully.")
     print("----------------------------------------------------------------------------------------------------\n")
     tprint("PerovStats", font="epic")
@@ -133,6 +137,7 @@ def completion_message(perovstats_object: PerovStats, time_taken: str, time_per_
         f"Output Directory                      : {perovstats_object.config['output_dir']}\n"
         f"File Extension                        : {perovstats_object.config['file_ext']}\n"
         f"Files Found                           : {len(perovstats_object.images)}\n"
+        f"Successfully Processed                : {successful_no} ({success_perc}%)\n"
         f"Time Taken                            : {time_taken} (~{time_per_image}/image)\n"
         f"----------------------------------------------------------------------------------------------------"
     )
