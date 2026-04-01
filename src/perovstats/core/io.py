@@ -78,7 +78,9 @@ def grain_area_histogram(data, filename, output_dir):
         ax.set_ylabel('Frequency')
         ax.set_title('Grain areas nm²')
         plt.tight_layout()
-        fig.savefig(output_dir / "graphs" / f"{filename}_grain_areas_hist.png", dpi=300)
+        full_output_dir = output_dir / "graphs"
+        full_output_dir.mkdir(parents=True, exist_ok=True)
+        fig.savefig(full_output_dir / f"{filename}_grain_areas_hist.png", dpi=300)
         plt.close(fig)
 
 
@@ -101,5 +103,7 @@ def grain_circularity_histogram(data, filename, output_dir):
     ax.set_ylabel('Frequency')
     ax.set_title('Grain circularities (0-1)')
     plt.tight_layout()
-    fig.savefig(output_dir / "graphs" / f"{filename}_grain_circularity_hist.png", dpi=300)
+    full_output_dir = output_dir / "graphs"
+    full_output_dir.mkdir(parents=True, exist_ok=True)
+    fig.savefig(full_output_dir / f"{filename}_grain_circularity_hist.png", dpi=300)
     plt.close(fig)

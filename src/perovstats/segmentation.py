@@ -31,11 +31,8 @@ def segment_image_cellpose(config: dict[str, any], image_object: ImageData):
     logger.info(f"[{image_object.filename}] : *** Mask creation ***")
     logger.info(f"[{image_object.filename}] : Creating grain mask")
 
-    pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
-
     # Skeletonisation config option
     height_bias = config["segmentation"]["height_bias"]
-    grain_diam_nm = config["segmentation"]["grain_diam_nm"]
 
     output_dir = Path(config["output_dir"])
     fname = image_object.filename
@@ -47,19 +44,13 @@ def segment_image_cellpose(config: dict[str, any], image_object: ImageData):
 
     model = models.CellposeModel(gpu=use_gpu)
 
-    diameter = grain_diam_nm / pixel_to_nm_scaling
-
-    # NOTE: This may be good to remove and set the diameter as a constant, testing required.
-    if diameter < 40:
-        diameter = diameter * 2
-
     # Parameters:
     # diameter: the px diameter of a grain. As grain sizes differ aim for an average value
     # flow_threshold: How sensitive the segmentation should be. Higher values create more grains, lower values reduce
     # cellprob_threshold: Threshold to mark area as grain based on the probability it is one.
     masks, flows, styles = model.eval(
         image_object.high_pass,
-        diameter=diameter,
+        diameter=50,
         flow_threshold=0.8,
         cellprob_threshold=-1,
         resample=False,
@@ -89,86 +80,6 @@ def segment_image_cellpose(config: dict[str, any], image_object: ImageData):
     rgb_highpass = normalise_array(rgb_highpass)
     rgb_highpass[np_mask > 0] = [1, 0, 0]
     save_image(rgb_highpass, img_dir, f"{fname}_mask_overlay.jpg")
-
-
-# def clean_mask(
-#     mask: np.ndarray,
-#     area_threshold: float = 100,
-#     disk_radius: int = 4,
-# ) -> np.ndarray:
-#     """
-#     Clean up grain mask by connecting close segments and removing small sections.
-
-#     Parameters
-#     ----------
-#     mask : np.ndarray
-#         Mask array.
-#     area_threshold : float, optional
-#         Area threshold for cleaning up mask.
-#     disk_radius : int, optional
-#         Disk radius for cleaning up mask.
-
-#     Returns
-#     -------
-#     numpy.ndarray
-#         Cleaned up mask array.
-#     """
-#     mask = ski.morphology.remove_small_holes(
-#         ski.morphology.remove_small_objects(mask.astype(int), max_size=area_threshold)
-#     )
-#     return ski.morphology.opening(mask, ski.morphology.disk(disk_radius))
-
-
-# def create_grain_mask(
-#     im: np.ndarray,
-#     threshold_block_size: float,
-#     threshold_offset: float,
-#     smooth_sigma: float,
-#     area_threshold: float,
-#     disk_radius: float,
-#     height_bias: float,
-# ) -> np.ndarray:
-#     """
-#     Use local thresholding to find grain edges and create a skeletonised mask of
-#     borders.
-
-#     Parameters
-#     ----------
-#     im : np.ndarray
-#         Image to be masked.
-#     threshold_block_size : float
-#         Size of blocks to be thresholded once at a time.
-#     threshold_offset : float
-#         Offset of the threshold calculated in threshold_local.
-#     smooth_sigma : float
-#         Amount of smoothing applied to the image before thresholding.
-#     area_threshold : float
-#         Maximum size of a grain considered too small to count.
-#     disk_radius : float
-#         How far to look for closeby segments when connecting them.
-#     height_bias : float
-#         How much to weight height over the centre of a line during skeletonisation.
-
-#     Returns
-#     -------
-#     np.ndarray
-#         Skeletonised mask of grain borders.
-#     """
-#     # Remove extremes
-#     p5, p95 = np.percentile(im, [30, 70])
-#     im = np.clip(im, p5, p95)
-
-#     im_ = ski.filters.difference_of_gaussians(im, low_sigma=1, high_sigma=3)
-#     # im_ = ski.filters.gaussian(im, sigma=smooth_sigma)
-#     # Get an array of thresholds for each pixel
-#     threshold = ski.filters.threshold_local(im_, block_size=threshold_block_size, offset=threshold_offset)
-#     # threshold = ski.filters.threshold_otsu(im_)
-#     mask = im_ > threshold
-#     mask = clean_mask(mask, area_threshold, disk_radius) if area_threshold else mask
-#     selection = ski.util.invert(mask)
-#     skeleton = Skeletonisation(im_, selection, height_bias=height_bias).do_skeletonisation()
-
-#     return skeleton
 
 
 class Skeletonisation:

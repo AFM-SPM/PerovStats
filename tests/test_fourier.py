@@ -29,9 +29,9 @@ def test_split_frequencies(image, dummy_perovstats_object: PerovStats):
     image_data = dummy_perovstats_object.images[0]
     image_data.high_pass = None
     image_data.low_pass = None
-    config["freqsplit"]["cutoff_bounds"] = [0, 10]
-    config["freqsplit"]["cutoff_step"] = 1
-    config["freqsplit"]["min_rms"] = 0
+    config["fourier"]["cutoff_bounds"] = [0, 10]
+    config["fourier"]["cutoff_step"] = 1
+    config["fourier"]["min_rms"] = 0
 
     split_frequencies(config, image_data)
 

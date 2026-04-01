@@ -3,47 +3,17 @@ output_dir: ./output # Directory to output results to
 file_ext: .spm # File extension of the data files.
 loading:
   channel: Height # Channel to pull data from in the data files.
-filter:
-  run: true # Options : true, false
-  row_alignment_quantile: 0.5 # lower values may improve flattening of larger features
-  threshold_method: std_dev # Options : otsu, std_dev, absolute
-  otsu_threshold_multiplier: 1.0
-  threshold_std_dev:
-    below: 10.0 # Threshold for data below the image background
-    above: 1.0 # Threshold for data above the image background
-  threshold_absolute:
-    below: -1.0 # Threshold for data below the image background
-    above: 1.0 # Threshold for data above the image background
-  gaussian_size: 1.0121397464510862 # Gaussian blur intensity in px
-  gaussian_mode: nearest
-  # Scar removal parameters. Be careful with editing these as making the algorithm too sensitive may
-  # result in ruining legitimate data.
-  remove_scars:
-    run: false
-    removal_iterations: 2 # Number of times to run scar removal.
-    threshold_low: 0.250 # lower values make scar removal more sensitive
-    threshold_high: 0.666 # lower values make scar removal more sensitive
-    max_scar_width: 4 # Maximum thichness of scars in pixels.
-    min_scar_length: 16 # Minimum length of scars in pixels.
-freqsplit:
+fourier:
   run: true
   edge_width: 0.03 # Width of the cutoff in frequency when performing the fourier split, as a fraction of the total frequency range. Higher values make the split less sensitive to cutoff choice.
   cutoff_bounds: [0, 0.3] # Minimum and maximum cutoff points for frequency splitting.
   min_rms: 10 # Minimum roughness mean score of a high-pass after splitting along the cutoff.
 segmentation:
-  smoothing:
-    sigma: 2
-  threshold_offset: 1.5 # Amount to change the calculated threshold by for segmentation. Lower thresholds increase sentitivity.
-  threshold_block_size: 100000 # Size of each block for local thresholding. Lower values increase segmentation sensitivity.
-  cleaning:
-    area_threshold: 10000 # in nm2.
-    disk_radius_factor: 20
-  height_bias: 100 # The amount to prioritise lower pixels to the centre when skeletonising a mask.
-  grain_diam_nm: 450 # The average diameter of a perovskite grain
+  height_bias: 100 # The amount to bias towards lower (darker) points over the centre when skeletonising grain boundary in a mask. 100 means a heavy bias towards the lowest point in a grain boundary.
 pruning:
   run: true
-  min_line_length: 5
-  max_connecting_dist: 10
+  min_line_length: 5 # The minimum length an offshoot can be to not be considered an error and deleted.
+  max_connecting_dist: 10 # The maximum distance the end of an offshoot can be to the other side of the grain for it to be considered an unfinished grain boundary and connected.
 remove_smears:
     run: true
     smooth_sigma: 1 # How much to smooth the high pass image before comparing gradients

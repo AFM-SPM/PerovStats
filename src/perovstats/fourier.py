@@ -33,7 +33,7 @@ def split_frequencies(
     ValueError
         If neither `cutoff` nor `cutoff_freq_nm` argument supplied.
     """
-    freqsplit_config = config["freqsplit"]
+    freqsplit_config = config["fourier"]
     edge_width = freqsplit_config["edge_width"]
     min_cutoff = freqsplit_config["cutoff_bounds"][0]
     max_cutoff = freqsplit_config["cutoff_bounds"][1]
