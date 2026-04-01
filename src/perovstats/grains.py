@@ -9,9 +9,8 @@ from skimage import morphology
 
 from .core.classes import Grain, ImageData
 from .core.image_processing import normalise_array
-from .core.io import save_image
+from .core.io import save_image, grain_area_histogram, grain_circularity_histogram
 from .smears import clean_smears
-from .statistics import grain_area_histogram, grain_circularity_histogram
 
 
 def find_grains(

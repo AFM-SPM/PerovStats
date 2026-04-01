@@ -4,6 +4,7 @@ from yaml import safe_dump
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn as sns
 
 
 def save_image(image: np.ndarray, output_dir: Path, filename: str, cmap: str='grey') -> None:
@@ -55,3 +56,50 @@ def save_config(config: dict, output_filename: str) -> None:
     """
     with (output_filename).open("w") as outfile:
         safe_dump(config, outfile, default_flow_style=False)
+
+
+def grain_area_histogram(data, filename, output_dir):
+    """
+    Method for saving a histogram plotting the areas of grains found.
+
+    Parameters
+    ----------
+    data : List[float]
+        A list of the datapoints (areas) for each grain.
+    filename : str
+        The name of the .spm file being processed.
+    output_dir : Path
+        The main directory outputs are saved to.
+    """
+    with plt.ioff():
+        fig, ax = plt.subplots(figsize=(8, 6))
+        sns.histplot(data, bins='auto', kde=True, log_scale=True, color='skyblue', edgecolor='black', ax=ax)
+        ax.set_xlabel('Values')
+        ax.set_ylabel('Frequency')
+        ax.set_title('Grain areas nm²')
+        plt.tight_layout()
+        fig.savefig(output_dir / "graphs" / f"{filename}_grain_areas_hist.png", dpi=300)
+        plt.close(fig)
+
+
+def grain_circularity_histogram(data, filename, output_dir):
+    """
+    Method for saving a histogram plotting the circularity rating of grains found.
+
+    Parameters
+    ----------
+    data : List[float]
+        A list of the datapoints (circularity rating) for each grain.
+    filename : str
+        The name of the .spm file being processed.
+    output_dir : Path
+        The main directory outputs are saved to.
+    """
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sns.histplot(data, bins='auto', kde=True, color='skyblue', edgecolor='black', ax=ax)
+    ax.set_xlabel('Values')
+    ax.set_ylabel('Frequency')
+    ax.set_title('Grain circularities (0-1)')
+    plt.tight_layout()
+    fig.savefig(output_dir / "graphs" / f"{filename}_grain_circularity_hist.png", dpi=300)
+    plt.close(fig)

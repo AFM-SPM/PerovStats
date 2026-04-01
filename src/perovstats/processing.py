@@ -73,7 +73,7 @@ def process(
         if not image_object.success:
             continue
 
-        # Generate grain mask of the high-passed image
+        # Generate segmented mask of the high-passed image
         segment_image_cellpose(perovstats_object.config, image_object)
 
         # Remove small offshoots in the mask and connect sections with small breaks

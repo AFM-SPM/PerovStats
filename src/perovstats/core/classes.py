@@ -99,6 +99,12 @@ class ImageData:
         The mode area of grains in the image.
     pixel_to_nm_scaling : float
         Image scaling of pixels to nm.
+    threshold : float
+        The threshold used for segmentation.
+    mask_areas:
+        A list of floats containing the areas for each grain.
+    circularity_rating:
+        A lsit of floats containing the circularity rating for each grain (0-1).
     """
     success: bool | None = None
     image_original: np.ndarray | None = None
@@ -125,8 +131,8 @@ class ImageData:
     mode_grain_area: float | None = None
     pixel_to_nm_scaling: float | None = None
     threshold: float | None = None
-    mask_areas: list | None = None
-    circularity_data: list | None = None
+    mask_areas: list[float] | None = None
+    circularity_data: list[float] | None = None
 
     def to_dict(self) -> dict:
         """
@@ -142,15 +148,12 @@ class ImageData:
         return {
             "file_dir": self.file_directory,
             "filename": self.filename,
-            "threshold": self.threshold,
             "num_grains": self.num_grains,
             "grains_per_nm2": self.grains_per_nm2,
             "mask_size_x_nm": self.mask_size_x_nm,
             "mask_size_y_nm": self.mask_size_y_nm,
             "mask_area_nm": self.mask_area_nm,
             "pixel_to_nm_scaling": self.pixel_to_nm_scaling,
-            "cutoff_freq_nm": self.cutoff_freq_nm,
-            "cutoff": self.cutoff,
             "mean_grain_area_nm2": self.mean_grain_area,
             "median_grain_area_nm2": self.median_grain_area,
             "mode_grain_area_nm2": self.mode_grain_area,
