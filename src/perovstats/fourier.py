@@ -92,11 +92,11 @@ def split_frequencies(
         arr = high_pass
         # arr = normalise_array(arr)
         img_dir = Path(file_output_dir) / "images"
-        save_image(arr, img_dir, f"{filename}_high_pass.jpg", cmap="grey")
+        save_image(arr, img_dir, f"{filename}_highpass.png", cmap="grey")
 
         arr = low_pass
         # arr = normalise_array(arr)
-        save_image(arr, img_dir, f"{filename}_low_pass.jpg", cmap="grey")
+        save_image(arr, img_dir, f"{filename}_lowpass.png", cmap="grey")
     else:
         logger.info(f"[{image_object.filename}] : Frequency splitting is disabled by config, the original image will be used.")
         if image_object.image_flattened is not None:
@@ -106,7 +106,7 @@ def split_frequencies(
 
     arr = image_object.image_original
     arr = normalise_array(arr)
-    save_image(arr, file_output_dir / "images", f"{filename}_original.jpg", cmap="grey")
+    save_image(arr, file_output_dir / "images", f"{filename}_original.png", cmap="grey")
 
 
 def perform_fourier(

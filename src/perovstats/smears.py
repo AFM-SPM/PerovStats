@@ -105,6 +105,7 @@ def clean_smears(mask: np.ndarray, smear_mask: np.ndarray) -> np.ndarray:
     """
     Compare the found grain segments with the previously computed smear mask
     and remove grains that overlap with any part of the mask.
+    Also keep a log of
 
     Parameters
     ----------
@@ -119,14 +120,41 @@ def clean_smears(mask: np.ndarray, smear_mask: np.ndarray) -> np.ndarray:
         The resultant grain mask with sections overlapping with the smear mask removed.
 
     """
+    removed_mask = np.zeros_like(mask, dtype=bool)
     mask_labelled = morphology.label(mask)
     mask_regionprops = regionprops(mask_labelled)
+
+    keep_labels = []
+    remove_regions = []
+
+    no_fly_zone = morphology.dilation(mask, footprint=morphology.disk(1))
+
     # for each grain in mask
     for region in mask_regionprops:
         region_crop = mask_labelled[region.slice] == region.label
         smear_crop = smear_mask[region.slice].astype(bool)
+
         # if any pixels overlap with smear mask, remove them
         if np.any(region_crop & smear_crop):
-            mask[region.slice][region_crop] = 0
+            remove_regions.append(region)
+        else:
+            keep_labels.append(region.label)
 
-    return mask
+    good_grains_mask = np.isin(mask_labelled, keep_labels)
+    no_fly_zone = morphology.dilation(good_grains_mask, footprint=morphology.disk(1))
+
+    for region in remove_regions:
+        grain_pixels = (mask_labelled == region.label)
+
+        # Get the mask pixels bordering this grain
+        dilated_grain = morphology.dilation(grain_pixels, footprint=morphology.disk(1))
+        outer_halo = dilated_grain ^ grain_pixels
+
+        # Only keep this mask border where it's not touching a border of an existing grain
+        safe_halo = outer_halo & ~no_fly_zone
+
+        # Add the border sections safe to delete to the removed_mask and remove the grain
+        removed_mask[safe_halo] = True
+        mask[grain_pixels] = 0
+
+    return mask, removed_mask

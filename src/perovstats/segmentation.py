@@ -10,9 +10,8 @@ from cellpose import models, core
 from cellpose import utils as cellposeutils
 import cv2
 
-from .core.io import save_image
 from .core.classes import ImageData
-from .core.image_processing import normalise_array, get_local_pixels_binary
+from .core.image_processing import get_local_pixels_binary
 
 
 def segment_image_cellpose(config: dict[str, any], image_object: ImageData):
@@ -57,7 +56,7 @@ def segment_image_cellpose(config: dict[str, any], image_object: ImageData):
         min_size=10,
     )
 
-    logger.info(f"[{image_object.filename}] : Mask created, Returning image to original size.")
+    logger.success(f"[{image_object.filename}] : Mask created, Returning image to original size.")
     # Return mask to original shape after model resizing
     if masks.shape != image_object.high_pass.shape:
         masks = cv2.resize(masks.astype(np.float32),
@@ -69,17 +68,6 @@ def segment_image_cellpose(config: dict[str, any], image_object: ImageData):
     np_mask = Skeletonisation(image_object.high_pass, mask, height_bias=height_bias).do_skeletonisation()
 
     image_object.mask = np_mask
-
-    # Convert to image format and save
-    img_dir = Path(output_dir) / fname / "images"
-    save_image(np_mask, img_dir, f"{fname}_mask.jpg")
-
-    # Save high-pass with mask skeleton
-    high_pass = image_object.high_pass
-    rgb_highpass = np.stack((high_pass,)*3, axis=-1)
-    rgb_highpass = normalise_array(rgb_highpass)
-    rgb_highpass[np_mask > 0] = [1, 0, 0]
-    save_image(rgb_highpass, img_dir, f"{fname}_mask_overlay.jpg")
 
 
 class Skeletonisation:

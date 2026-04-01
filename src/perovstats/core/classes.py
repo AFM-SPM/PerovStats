@@ -71,6 +71,10 @@ class ImageData:
         The percentage of the total grain area that was removed by smear detection.
     grains : dict[int, Grain]
         Dictionary containing all grains as class objects, with an id int as the key.
+    edge_grains : dict[int, Grain]
+        Dictionary containing all grains that touch the edge of the image as class objects, with an id int as the key.
+    smear_grains : dict[int, Grain]
+        Dictionary containing all grains that touch a smear area as class objects, with an id int as the key.
     file_directory : str
         The folder to save output data to
     filename : str
@@ -116,6 +120,8 @@ class ImageData:
     smears_removed: bool | None = None
     smear_percent: float | None = None
     grains: dict[int, Grain] | None = None
+    edge_grains: dict[int, Grain] | None = None
+    smear_grains: dict[int, Grain] | None = None
     file_directory: str | None = None
     filename: str | None = None
     mask_rgb: np.ndarray | None = None
@@ -131,8 +137,8 @@ class ImageData:
     mode_grain_area: float | None = None
     pixel_to_nm_scaling: float | None = None
     threshold: float | None = None
-    mask_areas: list[float] | None = None
-    circularity_data: list[float] | None = None
+    mask_areas: list | None = None
+    circularity_data: list | None = None
 
     def to_dict(self) -> dict:
         """
