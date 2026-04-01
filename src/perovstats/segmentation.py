@@ -31,11 +31,8 @@ def segment_image_cellpose(config: dict[str, any], image_object: ImageData):
     logger.info(f"[{image_object.filename}] : *** Mask creation ***")
     logger.info(f"[{image_object.filename}] : Creating grain mask")
 
-    pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
-
     # Skeletonisation config option
     height_bias = config["segmentation"]["height_bias"]
-    grain_diam_nm = config["segmentation"]["grain_diam_nm"]
 
     output_dir = Path(config["output_dir"])
     fname = image_object.filename
@@ -47,19 +44,13 @@ def segment_image_cellpose(config: dict[str, any], image_object: ImageData):
 
     model = models.CellposeModel(gpu=use_gpu)
 
-    diameter = grain_diam_nm / pixel_to_nm_scaling
-
-    # NOTE: This may be good to remove and set the diameter as a constant, testing required.
-    if diameter < 40:
-        diameter = diameter * 2
-
     # Parameters:
     # diameter: the px diameter of a grain. As grain sizes differ aim for an average value
     # flow_threshold: How sensitive the segmentation should be. Higher values create more grains, lower values reduce
     # cellprob_threshold: Threshold to mark area as grain based on the probability it is one.
     masks, flows, styles = model.eval(
         image_object.high_pass,
-        diameter=diameter,
+        diameter=50,
         flow_threshold=0.8,
         cellprob_threshold=-1,
         resample=False,

@@ -176,16 +176,16 @@ def main(args: list[str] | None = None) -> None:
         with Path(resources.files(__package__) / "./default_config.yaml").open() as f:
             config = safe_load(f)
 
-    fs_config = config.get("freqsplit", {})
+    fs_config = config.get("fourier", {})
 
     # Update from command line arguments if specified
     fs_config.update({k: v for k, v in vars(args).items() if v is not None})
 
     if args.cutoff is not None:
-        config['freqsplit']['cutoff'] = args.cutoff
+        config['fourier']['cutoff'] = args.cutoff
 
     if args.edge_width is not None:
-        config['freqsplit']['edge_width'] = args.edge_width
+        config['fourier']['edge_width'] = args.edge_width
 
     # Non-recursively find files
     base_dir = get_arg("base_dir", args, config, "./")
