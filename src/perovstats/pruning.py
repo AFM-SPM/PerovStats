@@ -1,12 +1,10 @@
 import heapq
-from pathlib import Path
 
 from loguru import logger
 import numpy as np
 from scipy.ndimage import distance_transform_edt
 
 from .core.classes import ImageData
-from .core.io import save_image
 
 
 def prune_mask(config, image_object: ImageData) -> None:
@@ -23,10 +21,8 @@ def prune_mask(config, image_object: ImageData) -> None:
     image_object : ImageData
         Dataclass instance of the image currently being processed.
     """
-    output_dir = Path(config["output_dir"])
     config = config["pruning"]
     if config["run"]:
-        og_mask = image_object.mask.copy()
         logger.info(f"[{image_object.filename}] : *** Pruning ***")
         min_line_length = config["min_line_length"]
         max_connecting_dist = config["max_connecting_dist"]
@@ -72,13 +68,6 @@ def prune_mask(config, image_object: ImageData) -> None:
             for col in range(1, width-1):
                 if end_pixels[row, col] == 2:
                     endpoints += 1
-
-        fname = image_object.filename
-        # Convert to image format and save
-        img_dir = Path(output_dir) / fname / "images"
-        save_image(mask, img_dir, f"{fname}_mask_pruning_yes.jpg")
-        save_image(og_mask, img_dir, f"{fname}_mask_pruning_no.jpg")
-        save_image(end_pixels, img_dir, f"{fname}_mask_endpoints.jpg")
 
 
 def get_connections(mask: np.ndarray, row: int, col: int) -> np.ndarray:

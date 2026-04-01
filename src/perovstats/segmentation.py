@@ -31,7 +31,7 @@ def segment_image_cellpose(config: dict[str, any], image_object: ImageData):
     # If a GPU is available on the device use it, if not then the CPU will be used instead (much slower)
     use_gpu = core.use_gpu()
     if not use_gpu:
-        logger.warning(f"[{image_object.filename}] : No GPU detected, CPU is being used for segmentation. This may take a few minutes..")
+        logger.warning(f"[{image_object.filename}] : No Nvidia GPU detected, CPU is being used for segmentation. This may take a few minutes..")
 
     model = models.CellposeModel(gpu=use_gpu)
 

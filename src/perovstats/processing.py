@@ -8,7 +8,7 @@ import pandas as pd
 
 from .core.classes import ImageData, PerovStats
 from .core.io import save_to_csv, save_config
-from .segmentation import segment_image, segment_image_cellpose
+from .segmentation import segment_image_cellpose
 from .grains import find_grains
 from .fourier import split_frequencies
 from .smears import find_smear_areas
