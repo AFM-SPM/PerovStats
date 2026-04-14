@@ -10,8 +10,10 @@ class Grain:
 
     Parameters
     ----------
-    grain_id : int | None
+    grain_id : int
         Unique identifier for the grain.
+    grain_image : np.ndarray | None
+        A mask of the grain taken from the high-passed image.
     grain_mask : np.ndarray | None
         A binary mask of the outline of the singular grain.
     grain_area : float | None
@@ -22,10 +24,15 @@ class Grain:
         Volume of the grain in nm^3
     """
     grain_id: int
+    indented: bool = False
+    grain_image: np.ndarray | None = None
     grain_mask: np.ndarray | None = None
+    grain_mask_outline: np.ndarray | None = None
     grain_area: float | None = None
     grain_circularity_rating: float | None = None
     grain_volume: float | None = None
+    indent_mask: np.ndarray | None = None
+    grain_bbox: tuple[int] | None = None
 
     def to_dict(self) -> dict:
         """

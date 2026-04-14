@@ -8,11 +8,11 @@ import pandas as pd
 
 from .core.classes import ImageData, PerovStats
 from .core.io import save_to_csv, save_config
-from .segmentation import segment_image_cellpose
+from .segmentation import segment_image
 from .grains import find_grains
 from .fourier import split_frequencies
 from .smears import find_smear_areas
-from .pruning import prune_mask
+from .pruning import find_indents
 
 
 def process(
@@ -74,16 +74,16 @@ def process(
             continue
 
         # Generate segmented mask of the high-passed image
-        segment_image_cellpose(perovstats_object.config, image_object)
-
-        # Remove small offshoots in the mask and connect sections with small breaks
-        prune_mask(perovstats_object.config, image_object)
+        segment_image(perovstats_object.config, image_object)
 
         # Find smear areas to be ignored/ removed
         find_smear_areas(perovstats_object.config, image_object)
 
         # Identify individual grains from mask and generate statistics on them
         find_grains(perovstats_object.config, image_object)
+
+        # Find and mark indents in grains
+        find_indents(perovstats_object.config, image_object)
 
         logger.info(f"[{image_object.filename}] : *** Exporting data ***")
         # Save image and grain data to their own .csv file
@@ -128,11 +128,18 @@ def completion_message(perovstats_object: PerovStats, time_taken: str, time_per_
     successful_no = sum(image.success for image in perovstats_object.images)
     success_perc = round((successful_no / len(perovstats_object.images)) * 100, 2)
 
+    segment_method = perovstats_object.config['segmentation']['segmentation_type']
+    if segment_method == "traditional":
+        segment_method = "Traditional (fast)"
+    elif segment_method == "cellpose":
+        segment_method = "Cellpose ML (accurate)"
+
     logger.success("Process completed successfully.")
     print("----------------------------------------------------------------------------------------------------\n")
     tprint("PerovStats", font="epic")
     print(
         f"----------------------------------------------------------------------------------------------------\n"
+        f"Segmentation Method                   : {segment_method}\n"
         f"Base Directory                        : {perovstats_object.config['base_dir']}\n"
         f"Output Directory                      : {perovstats_object.config['output_dir']}\n"
         f"File Extension                        : {perovstats_object.config['file_ext']}\n"

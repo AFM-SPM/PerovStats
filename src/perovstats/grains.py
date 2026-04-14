@@ -5,7 +5,9 @@ from loguru import logger
 import numpy as np
 from skimage.color import label2rgb
 from skimage.measure import label, regionprops
+from skimage.segmentation import find_boundaries
 from skimage import morphology
+from scipy.ndimage import binary_fill_holes
 
 from .core.classes import Grain, ImageData
 from .core.image_processing import normalise_array
@@ -72,7 +74,21 @@ def find_grains(
     mask_images = [
         regionprop.image for regionprop in mask_regionprops
     ]
+    mask_outlines = [
+        get_grain_outline(img) for img in mask_images
+    ]
     all_masks_grain_areas.extend(mask_areas)
+    mask_bboxs = [prop.bbox for prop in mask_regionprops]
+
+    # Get the image of the grain from the high-passed image
+    grain_images = []
+    for regionprop in mask_regionprops:
+        bbox_slice = regionprop.slice
+        hollow_mask = regionprop.image
+        filled_mask = binary_fill_holes(hollow_mask)
+        crop = image_object.high_pass[bbox_slice]
+        grain_image = np.where(filled_mask, crop, 0)
+        grain_images.append(grain_image)
 
     # Averages and overall stats for the entire image
     mask_size_x_nm = mask.shape[1] * pixel_to_nm_scaling
@@ -119,10 +135,13 @@ def find_grains(
             # centre_x
             # centre_y
             # is_intersected
+            grain_image=grain_images[i],
             grain_mask=mask_images[i],
+            grain_mask_outline=mask_outlines[i],
             grain_area=grain_area,
             grain_circularity_rating=grain_circularity,
-            # grain_volume=grain_volume
+            # grain_volume=grain_volume,
+            grain_bbox=mask_bboxs[i],
         )
 
     logger.info(
@@ -312,3 +331,16 @@ def tidy_border(mask: np.ndarray[np.bool_], min_dist) -> np.ndarray[np.bool_]:
 #     image_mask = np.ma.masked_array(mask, mask=np.invert(grain_only_mask), fill_value=np.nan).filled()
 
 #     return np.nansum(image_mask) * pixel_to_nm_scaling**2 * (1e-9)**3
+
+
+def get_grain_outline(mask: np.ndarray) -> np.ndarray:
+    padded_mask = np.pad(mask, pad_width=1, mode='constant', constant_values=False)
+    boundary = find_boundaries(padded_mask, mode='inner')
+
+    return boundary[1:-1, 1:-1]
+
+
+def split_grain(image_object: ImageData, grain_object: Grain, split_mask: np.ndarray) -> None:
+    new_mask = grain_object.grain_mask_outline | split_mask
+
+    labelled_mask = label(new_mask, connectivity=1)

@@ -16,7 +16,7 @@ The program will:
 All output data is by default saved to a sub-folder with the same name as the original `.spm` file under an `/output/` directory (editable in the config).
 
 The folder contains:
-- An `images` folder of `.jpg` files for:
+- An `images` folder of `.png` files for:
     - Marked and coloured grains (coloured grains)
     - Post-fourier transform scan (high-pass)
     - Data removed from the fourier transofrm (low-pass)
@@ -33,12 +33,17 @@ The folder contains:
 output/
 ├─ [spm_filename]/
 │  ├─ images/
-│  │  ├─ [spm_filename]_coloured_grains.jpg
-│  │  ├─ [spm_filename]_high_pass.jpg
-│  │  ├─ [spm_filename]_low_pass.jpg
-│  |  ├─ [spm_filename]_mask_overlay.jpg
-│  │  ├─ [spm_filename]_mask.jpg
-│  │  └─ [spm_filename]_original.jpg
+│  │  ├─ graphs/
+│  │  │  ├─ [spm_filename]_grain_areas_hist.png
+│  │  │  └─ [spm_filename]_grain_circularity_hist.png
+│  |  ├─ [spm_filename]_highpass_mask_overlay.png
+│  │  ├─ [spm_filename]_highpass.png
+│  │  ├─ [spm_filename]_lowpass.png
+│  │  ├─ [spm_filename]_mask.png
+│  │  ├─ [spm_filename]_original_mask_overlay.png
+│  │  ├─ [spm_filename]_original.png
+│  │  ├─ [spm_filename]_rgb_grains.png
+│  │  └─ [spm_filename]_smears.png
 │  ├─ config.yaml
 │  ├─ grain_statistics.csv
 │  └─ image_statistics.csv
