@@ -5,7 +5,9 @@ from loguru import logger
 import numpy as np
 from skimage.color import label2rgb
 from skimage.measure import label, regionprops
+from skimage.segmentation import find_boundaries
 from skimage import morphology
+from scipy.ndimage import binary_fill_holes
 
 from .core.classes import Grain, ImageData
 from .core.image_processing import normalise_array
@@ -48,14 +50,16 @@ def find_grains(
 
     # Remove grains touching the edge
     min_dist_from_edge = 4
-    labelled_mask = tidy_border(labelled_mask, min_dist_from_edge)
+    labelled_mask, border_grains = tidy_border(labelled_mask, min_dist_from_edge)
+    image_object.edge_grains = border_grains
 
     max_size = 25
     labelled_mask = remove_small_grains(labelled_mask, max_size)
 
     # Remove grains in/ touching smears
     if config["remove_smears"]["run"]:
-        labelled_mask = clean_smears(labelled_mask, image_object.smears)
+        labelled_mask, removed_mask = clean_smears(labelled_mask, image_object.smears)
+        image_object.smear_grains = removed_mask
 
     labelled_mask_rgb = label2rgb(labelled_mask, bg_label=0, saturation=0)
 
@@ -70,7 +74,21 @@ def find_grains(
     mask_images = [
         regionprop.image for regionprop in mask_regionprops
     ]
+    mask_outlines = [
+        get_grain_outline(img) for img in mask_images
+    ]
     all_masks_grain_areas.extend(mask_areas)
+    mask_bboxs = [prop.bbox for prop in mask_regionprops]
+
+    # Get the image of the grain from the high-passed image
+    grain_images = []
+    for regionprop in mask_regionprops:
+        bbox_slice = regionprop.slice
+        hollow_mask = regionprop.image
+        filled_mask = binary_fill_holes(hollow_mask)
+        crop = image_object.high_pass[bbox_slice]
+        grain_image = np.where(filled_mask, crop, 0)
+        grain_images.append(grain_image)
 
     # Averages and overall stats for the entire image
     mask_size_x_nm = mask.shape[1] * pixel_to_nm_scaling
@@ -117,31 +135,58 @@ def find_grains(
             # centre_x
             # centre_y
             # is_intersected
+            grain_image=grain_images[i],
             grain_mask=mask_images[i],
+            grain_mask_outline=mask_outlines[i],
             grain_area=grain_area,
             grain_circularity_rating=grain_circularity,
-            # grain_volume=grain_volume
+            # grain_volume=grain_volume,
+            grain_bbox=mask_bboxs[i],
         )
 
     logger.info(
         f"[{filename}] : Obtained {image_object.num_grains} grains",
     )
 
-    # Save high-pass with mask skeleton overlay and an image colouring grains individually
+
+    # Remove mask outlines of edge grains and smear grains from the mask
     mask_rgb = mask_data["mask_rgb"]
     image_object.mask_rgb = mask_rgb
     save_dir = Path(config_yaml["output_dir"]) / filename / "images"
-    save_image(mask_rgb, save_dir, f"{filename}_rgb_grains.jpg", cmap=None)
+    new_mask = image_object.mask.copy()
+    new_mask[image_object.edge_grains] = 0
+    new_mask[image_object.smear_grains] = 0
+    image_object.cleaned_mask = new_mask
+
+    # Save the cleaned mask
+    save_image(new_mask, save_dir, f"{filename}_mask.png")
+
+    # Save high-pass with mask overlay
+    high_pass = image_object.high_pass
+    rgb_highpass = np.stack((high_pass,)*3, axis=-1)
+    rgb_highpass = normalise_array(rgb_highpass)
+    rgb_highpass[new_mask > 0] = [1, 0, 0]
+    save_image(rgb_highpass, save_dir, f"{filename}_highpass_mask_overlay.png")
+
+    # Save original image with mask overlay
+    original = image_object.image_original
+    rgb_original = np.stack((original,)*3, axis=-1)
+    rgb_original = normalise_array(rgb_original)
+    rgb_original[new_mask > 0] = [1, 0, 0]
+    save_image(rgb_original, save_dir, f"{filename}_original_mask_overlay.png")
+
+    # Save the high-pass image with solid grains and red sections identifying smear areas
+    save_image(mask_rgb, save_dir, f"{filename}_rgb_grains.png", cmap=None)
     smear_overlay = np.stack((image_object.high_pass,)*3, axis=-1)
     smear_overlay = normalise_array(smear_overlay)
     mask_2d = np.all(mask_rgb == 0, axis=2)
     smear_overlay[mask_2d == 0] = [1, 1, 1]
     smear_overlay[image_object.smears == 1] = [1, 0, 0]
-    save_image(smear_overlay, save_dir, f"{filename}_smears.jpg")
+    save_image(smear_overlay, save_dir, f"{filename}_smears.png")
 
+    # Save area and circularity data for all grains and export a histogram of them each
     image_object.mask_areas = mask_areas
     image_object.circularity_data = circularity_data
-
     grain_area_histogram(mask_areas, filename, save_dir)
     grain_circularity_histogram(circularity_data, filename, save_dir)
 
@@ -236,7 +281,8 @@ def remove_small_grains(mask, max_size):
 @staticmethod
 def tidy_border(mask: np.ndarray[np.bool_], min_dist) -> np.ndarray[np.bool_]:
     """
-    Remove whole grains touching the border.
+    Remove whole grains touching the border. Also save data on the mask lines that contain a grain
+    touching the edge of the image, to be removed later.
 
     Parameters
     ----------
@@ -250,8 +296,11 @@ def tidy_border(mask: np.ndarray[np.bool_], min_dist) -> np.ndarray[np.bool_]:
     """
     # Find the grains that touch the border/ nearly touch the border then remove them from the full mask tensor
     # It is required to include grains almost touching the border here as the cellpose model can sometimes make straight grains
+    removed_mask = np.zeros_like(mask, dtype=bool)
     mask_labelled = morphology.label(mask)
     mask_regionprops = regionprops(mask_labelled)
+    to_remove = []
+    keep_indices = []
     for region in mask_regionprops:
         if (
             region.bbox[0] < min_dist
@@ -259,9 +308,22 @@ def tidy_border(mask: np.ndarray[np.bool_], min_dist) -> np.ndarray[np.bool_]:
             or region.bbox[2] > mask.shape[0] - min_dist
             or region.bbox[3] > mask.shape[1] - min_dist
         ):
-            mask[mask_labelled == region.label] = 0
+            to_remove.append(region)
+        else:
+            keep_indices.append(region.label)
 
-    return mask
+    kept_mask = np.isin(mask_labelled, keep_indices)
+    no_fly_zone = morphology.dilation(kept_mask, footprint=morphology.disk(1))
+
+    for region in to_remove:
+            grain_pixels = (mask_labelled == region.label)
+            dilated_grain = morphology.dilation(grain_pixels, footprint=morphology.disk(1))
+            outer_halo = dilated_grain ^ grain_pixels
+            safe_halo = outer_halo & ~no_fly_zone
+            removed_mask[safe_halo] = True
+            mask[grain_pixels] = 0
+
+    return mask, removed_mask
 
 # def find_grain_volume(mask: np.ndarray, mask_regionprop, labelled_mask: np.ndarray, grain_mask: np.ndarray, pixel_to_nm_scaling: float):
 #     # Get mask of only the grain but the same shape as the entire mask
@@ -269,3 +331,16 @@ def tidy_border(mask: np.ndarray[np.bool_], min_dist) -> np.ndarray[np.bool_]:
 #     image_mask = np.ma.masked_array(mask, mask=np.invert(grain_only_mask), fill_value=np.nan).filled()
 
 #     return np.nansum(image_mask) * pixel_to_nm_scaling**2 * (1e-9)**3
+
+
+def get_grain_outline(mask: np.ndarray) -> np.ndarray:
+    padded_mask = np.pad(mask, pad_width=1, mode='constant', constant_values=False)
+    boundary = find_boundaries(padded_mask, mode='inner')
+
+    return boundary[1:-1, 1:-1]
+
+
+def split_grain(image_object: ImageData, grain_object: Grain, split_mask: np.ndarray) -> None:
+    new_mask = grain_object.grain_mask_outline | split_mask
+
+    labelled_mask = label(new_mask, connectivity=1)

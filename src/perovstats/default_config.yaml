@@ -9,10 +9,19 @@ fourier:
   cutoff_bounds: [0, 0.3] # Minimum and maximum cutoff points for frequency splitting.
   min_rms: 10 # Minimum roughness mean score of a high-pass after splitting along the cutoff.
 segmentation:
+  segmentation_type: cellpose # Options: traditional, cellpose
+  traditional:
+    threshold_offset: -0.5 # Amount to change the calculated threshold by for segmentation. Lower thresholds increase sentitivity.
+    threshold_block_size: 200000 # Size of each block for local thresholding. Lower values increase segmentation sensitivity.
+    smoothing:
+      sigma: 8
+    cleaning:
+      area_threshold: 100 # in nm2.
+      disk_radius_factor: 40
   height_bias: 100 # The amount to bias towards lower (darker) points over the centre when skeletonising grain boundary in a mask. 100 means a heavy bias towards the lowest point in a grain boundary.
 pruning:
   run: true
-  min_line_length: 5 # The minimum length an offshoot can be to not be considered an error and deleted.
+  min_line_length: 100 # The minimum length an offshoot can be to not be considered an error and deleted.
   max_connecting_dist: 10 # The maximum distance the end of an offshoot can be to the other side of the grain for it to be considered an unfinished grain boundary and connected.
 remove_smears:
     run: true

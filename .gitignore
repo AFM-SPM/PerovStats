@@ -210,3 +210,8 @@ __marimo__/
 
 # Data folders:
 /output/
+
+# Notebook outputs:
+/notebooks/output/
+/notebooks/logs/
+/notebooks/*.log
