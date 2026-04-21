@@ -6,6 +6,7 @@ import numpy as np
 from cellpose import models, core
 from cellpose import utils as cellposeutils
 import cv2
+import torch
 
 from .core.classes import ImageData
 from .core.utils import Skeletonisation
@@ -24,6 +25,7 @@ def segment_image(config: dict[str, any], image_object: ImageData) -> None:
         # separately later so these are pruned for now.
         prune_mask(config, image_object)
     elif segmentation_method == "cellpose":
+        torch.sparse.check_sparse_tensor_invariants.disable()
         segment_image_cellpose(config, image_object)
 
     find_splits(config, image_object)
@@ -162,7 +164,7 @@ def clean_mask(
         Cleaned up mask array.
     """
     mask = ski.morphology.remove_small_holes(
-        ski.morphology.remove_small_objects(mask.astype(int), max_size=area_threshold)
+        ski.morphology.remove_small_objects(mask.astype(bool), max_size=area_threshold)
     )
     return ski.morphology.opening(mask, ski.morphology.disk(disk_radius))
 

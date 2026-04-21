@@ -10,7 +10,6 @@ from skimage.segmentation import find_boundaries
 from scipy.ndimage import label as scipylabel
 from scipy.signal import convolve2d
 from scipy.ndimage import distance_transform_edt, binary_dilation, binary_fill_holes
-import matplotlib.pyplot as plt
 
 
 from .core.classes import ImageData
@@ -292,7 +291,6 @@ def get_connection_path(mask: np.ndarray, dist_map: np.ndarray, endpoint: tuple,
 
 def find_splits(config, image_object):
     pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
-    prevmask = copy.deepcopy(image_object.mask)
     labelled_mask = label(np.invert(image_object.mask), connectivity=1)
     mask_regionprops = regionprops(labelled_mask)
     indentation_threshold = config["indentation"]["threshold"]
@@ -373,18 +371,9 @@ def find_splits(config, image_object):
                 apply_splits(image_object, full_skeleton.astype(bool) ^ mask_outline, mask_bboxs[j])
 
 
-    layered_full = np.zeros_like(prevmask)
-    layered_full = np.stack((layered_full,)*3, axis=-1, dtype=np.float32)
-    layered_full[image_object.mask] = [1, 0, 0]
-    layered_full[prevmask] = [1, 1, 1]
-    plt.imshow(layered_full)
-    plt.show()
-
-
 def find_indents(config: dict[str, any], image_object: ImageData):
     indentation_threshold = config["indentation"]["threshold"]
     image_object.indent_mask = copy.deepcopy(image_object.mask)
-    prevmask = copy.deepcopy(image_object.mask)
     for grain_object in image_object.grains.values():
         min_pixel_length = 5 # Minimum length of an indent/ split to still be counted
         min_area = 500 # Minimum area (px^2) a grain can have to be considered for indentation/ splitting
@@ -471,14 +460,6 @@ def find_indents(config: dict[str, any], image_object: ImageData):
                         if is_indented:
                             grain_object.indented = True
                             apply_indents(image_object, grain_object, indent_mask)
-
-
-    layered_full = np.zeros_like(prevmask)
-    layered_full = np.stack((layered_full,)*3, axis=-1, dtype=np.float32)
-    layered_full[image_object.mask] = [0, 1, 0]
-    layered_full[prevmask] = [1, 1, 1]
-    plt.imshow(layered_full)
-    plt.show()
 
 
 def find_mask_junctions(mask: np.ndarray) -> np.ndarray:

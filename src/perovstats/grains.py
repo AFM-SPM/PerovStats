@@ -54,8 +54,8 @@ def find_grains(
     labelled_mask, border_grains = tidy_border(labelled_mask, min_dist_from_edge)
     image_object.edge_grains = border_grains
 
-    max_size = 25
-    labelled_mask = remove_small_grains(labelled_mask, max_size)
+    min_size = 25
+    labelled_mask = remove_small_grains(labelled_mask, min_size)
 
     # Remove grains in/ touching smears
     if config["remove_smears"]["run"]:

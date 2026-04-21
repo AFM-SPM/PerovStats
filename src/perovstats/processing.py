@@ -12,7 +12,6 @@ from .segmentation import segment_image
 from .grains import find_grains
 from .fourier import split_frequencies
 from .smears import find_smear_areas
-from .pruning import find_indents
 
 
 def process(
