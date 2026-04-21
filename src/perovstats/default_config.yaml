@@ -9,7 +9,7 @@ fourier:
   cutoff_bounds: [0, 0.3] # Minimum and maximum cutoff points for frequency splitting.
   min_rms: 10 # Minimum roughness mean score of a high-pass after splitting along the cutoff.
 segmentation:
-  segmentation_type: cellpose # Options: traditional, cellpose
+  segmentation_type: traditional # Options: traditional, cellpose
   traditional:
     threshold_offset: -0.5 # Amount to change the calculated threshold by for segmentation. Lower thresholds increase sentitivity.
     threshold_block_size: 200000 # Size of each block for local thresholding. Lower values increase segmentation sensitivity.
@@ -23,6 +23,8 @@ pruning:
   run: true
   min_line_length: 100 # The minimum length an offshoot can be to not be considered an error and deleted.
   max_connecting_dist: 10 # The maximum distance the end of an offshoot can be to the other side of the grain for it to be considered an unfinished grain boundary and connected.
+indentation:
+  threshold: 0.55 # The sensitivity threshold for marking intends in a grain (0-1). Lower numbers make the algorithm more sensitive.
 remove_smears:
     run: true
     smooth_sigma: 1 # How much to smooth the high pass image before comparing gradients

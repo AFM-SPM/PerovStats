@@ -82,9 +82,6 @@ def process(
         # Identify individual grains from mask and generate statistics on them
         find_grains(perovstats_object.config, image_object)
 
-        # Find and mark indents in grains
-        find_indents(perovstats_object.config, image_object)
-
         logger.info(f"[{image_object.filename}] : *** Exporting data ***")
         # Save image and grain data to their own .csv file
         image_df = pd.DataFrame([image_object.to_dict()])
