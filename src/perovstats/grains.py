@@ -155,8 +155,11 @@ def find_grains(
     image_object.mask_rgb = mask_rgb
     save_dir = Path(config_yaml["output_dir"]) / filename / "images"
     new_mask = image_object.mask.copy()
+
     new_mask[image_object.edge_grains] = 0
     new_mask[image_object.smear_grains] = 0
+    # Remove single pixels left in the smear area by accident
+    new_mask = morphology.remove_small_objects(new_mask, max_size=1, connectivity=2)
     image_object.cleaned_mask = new_mask
 
     new_mask_indent = image_object.indent_mask.copy()
