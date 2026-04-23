@@ -22,15 +22,7 @@
 
 ## Repo cloning and virtual environment
 
-- Firstly open a command prompt or terminal in the folder you would like the PerovStats program in. You can navigate through folders in the terminal by typing `cd [childFolder]` or return to the last parent folder with `cd ..`
-
-- Once inside the correct folder, clone the github repo by entering this command:
-
-    `git clone https://github.com/AFM-SPM/PerovStats.git`
-
-- When it has finishing downloading, type `cd PerovStats` to enter the project directory
-
-- A virtual environment is best used for storing and running PerovStats. Inside the main project folder you just downloaded:
+- A virtual environment is best used for storing and running PerovStats. Inside the folder you would like PerovStats to be saved to:
 
     - Create the virtual environment with:
 
@@ -46,8 +38,18 @@
 
         In both cases you will see `(venv)` appear on the left of your command line.
 
+- Once the virutal environment is activated, open a command prompt or terminal in the folder `/venv` is in (or whatever you called it). You can navigate through folders in the terminal by typing `cd [childFolder]` or return to the last parent folder with `cd ..`
+
+- Once inside the correct folder, clone the github repo by entering this command:
+
+    `git clone https://github.com/AFM-SPM/PerovStats.git`
+
+- When it has finishing downloading, type `cd PerovStats` to enter the project directory
+
 - The requirments and dependencies must now be installed into the virtual environment. In the same directory still, type `pip install -r requirements.txt`
 
+  It may take a few minutes to install these packages.
+  
     *Note: If a **yellow** warning appears about 'upgrading pip' this can be ignored and will not stop PerovStats from working.*
 
 - **If you would like to run PerovStats from the command line rather than/ as well as from jupyter notebooks:**
