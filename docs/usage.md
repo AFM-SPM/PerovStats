@@ -8,12 +8,12 @@ If you have any issues please email t.allwood@sheffield.ac.uk - I will get back 
 
 ### perovstats-demo.ipynb
 
-#### This is the demo notebook for an explanation on running PerovStats and the processes it goes through. Use this notebook first to see how `.spm` files will be processed. As this is for example purposes, only one file can be inputted per run.
+#### This is the demo notebook for an explanation on running PerovStats and the processes it goes through. Use this notebook first to see how AFM files will be processed. As this is for example purposes, only one file can be inputted per run.
 
-- In the second code block there are paths for you to edit:
+- The first code block is for imports and can be ignored. In the second code block there are paths for you to edit:
     - `img_file`
 
-        The input .spm filepath. Two files are provided for you to test, simply remove the `# ` from one and add it to the start of the other to switch files.
+        The input filepath (.spm or other). Two files are provided for you to test, simply remove the `# ` from one and add it to the start of the other to switch files.
     - `output_dir`
 
         The directory to save the results and output to. If the folder does not exist this will be created while running PerovStats.
@@ -27,7 +27,22 @@ If you have any issues please email t.allwood@sheffield.ac.uk - I will get back 
 
 ### perovstats-process.ipynb
 
-#### This is the main notebook to use when running PerovStats, and allows multiple `.spm` files to be processed in one run
+#### This is the main notebook to use when running PerovStats, and allows multiple files to be processed in one run
+
+- The first code block is for imports and can be ignored. In the second code block there are paths for you to edit:
+    - `img_files`
+
+        The folder containing all images you want to process.
+    - `output_dir`
+
+        The directory to save the results and output to. If the folder does not exist this will be created while running PerovStats.
+    - `config_path`
+
+        The configuration file (`.yaml`) to be used in the program's run. For the demo notebook this can be left as is and default configuration options will be used.
+
+- You can now start running the cells (one at a time or all at once). Once all input images have been loaded they will be looped through one by one and processed. You can see log messages on the progress of the program as it progresses down the notebook.
+
+- Images of the scan, graphs, `.csv` files and a copy of the configuration options used will be saved to the output directory you chose earlier.
 
 ## Running from the command line
 
