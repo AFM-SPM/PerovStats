@@ -2,6 +2,8 @@
 
 This page assumes you have downloaded and set up PerovStats. If not, please follow the instructions found in [installation.md](installation.md).
 
+If you have any issues please email t.allwood@sheffield.ac.uk - I will get back to you as soon as I can
+
 ## Running from the notebook
 
 ### perovstats-demo.ipynb
