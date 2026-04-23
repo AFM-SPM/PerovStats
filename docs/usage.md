@@ -41,6 +41,8 @@ This page assumes you have downloaded and set up PerovStats. If not, please foll
 
     `(venv)` should now appear and you are ready to run PerovStats
 
+![(venv) showing in terminal](./images/venv_check.jpg)
+
 ### Running the program with default settings
 
 - The program can be run with the command `perovstats`. This will use the default settings and take config options from `default_config.yaml` found in `/src/perovstats/default_config.yaml`. Please do not move this file.
