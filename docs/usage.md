@@ -6,12 +6,12 @@ This page assumes you have downloaded and set up PerovStats. If not, please foll
 
 ### perovstats-demo.ipynb
 
-#### This is the demo notebook for an explanation on running PerovStats and the processes it goes through. Use this notebook first to see how `.spm` files will be processed. As this is for example purposes, only one file can be inputted per run.
+#### This is the demo notebook for an explanation on running PerovStats and the processes it goes through. Use this notebook first to see how files will be processed. As this is for example purposes, only one file can be inputted per run.
 
 - In the second code block there are paths for you to edit:
     - `img_file`
 
-        The input .spm filepath. Two files are provided for you to test, simply remove the `# ` from one and add it to the start of the other to switch files.
+        The input filepath. Two files are provided for you to test, simply remove the `# ` from one and add it to the start of the other to switch files.
     - `output_dir`
 
         The directory to save the results and output to. If the folder does not exist this will be created while running PerovStats.
@@ -25,7 +25,7 @@ This page assumes you have downloaded and set up PerovStats. If not, please foll
 
 ### perovstats-process.ipynb
 
-#### This is the main notebook to use when running PerovStats, and allows multiple `.spm` files to be processed in one run
+#### This is the main notebook to use when running PerovStats, and allows multiple files to be processed in one run
 
 ## Running from the command line
 
