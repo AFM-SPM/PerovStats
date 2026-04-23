@@ -142,7 +142,10 @@ def find_grains(
         )
 
     # Find and apply splits
-    find_indents(config, image_object)
+    if config["segmentation"]["find_indents"]:
+        find_indents(config, image_object)
+    else:
+        image_object.indent_mask = image_object.mask
 
     logger.info(
         f"[{filename}] : Obtained {image_object.num_grains} grains",
@@ -162,27 +165,21 @@ def find_grains(
     new_mask = morphology.remove_small_objects(new_mask, max_size=1, connectivity=2)
     image_object.cleaned_mask = new_mask
 
-    new_mask_indent = image_object.indent_mask.copy()
-    new_mask_indent[image_object.edge_grains] = 0
-    new_mask_indent[image_object.smear_grains] = 0
-    image_object.cleaned_indent_mask = new_mask_indent
-
     # Save the cleaned mask
     save_image(new_mask, save_dir, f"{filename}_mask.png")
-    save_image(new_mask_indent, save_dir, f"{filename}_indent_mask.png")
 
     # Save high-pass with mask overlay
     high_pass = image_object.high_pass
     rgb_highpass = np.stack((high_pass,)*3, axis=-1)
     rgb_highpass = normalise_array(rgb_highpass)
-    rgb_highpass[new_mask_indent > 0] = [1, 0, 0]
+    rgb_highpass[new_mask > 0] = [1, 0, 0]
     save_image(rgb_highpass, save_dir, f"{filename}_highpass_mask_overlay.png")
 
     # Save original image with mask overlay
     original = image_object.image_original
     rgb_original = np.stack((original,)*3, axis=-1)
     rgb_original = normalise_array(rgb_original)
-    rgb_original[new_mask_indent > 0] = [1, 0, 0]
+    rgb_original[new_mask > 0] = [1, 0, 0]
     save_image(rgb_original, save_dir, f"{filename}_original_mask_overlay.png")
 
     # Save the high-pass image with solid grains and red sections identifying smear areas

@@ -368,10 +368,16 @@ def find_splits(config, image_object):
             full_skeleton = extend_split_astar(mask_outline, segment, image)
 
             if validate_split(full_skeleton, filled_mask):
+                import skimage as ski
+                full_skeleton = full_skeleton.astype(bool)
+                full_skeleton = ski.morphology.remove_small_holes(full_skeleton, max_size=8, connectivity=2)
+                full_skeleton = ski.morphology.remove_small_objects(full_skeleton, max_size=8, connectivity=2)
+                full_skeleton = Skeletonisation(image, full_skeleton, height_bias=100).do_skeletonisation()
                 apply_splits(image_object, full_skeleton.astype(bool) ^ mask_outline, mask_bboxs[j])
 
 
 def find_indents(config: dict[str, any], image_object: ImageData):
+    import matplotlib.pyplot as plt
     indentation_threshold = config["indentation"]["threshold"]
     image_object.indent_mask = copy.deepcopy(image_object.mask)
     for grain_object in image_object.grains.values():
@@ -448,18 +454,17 @@ def find_indents(config: dict[str, any], image_object: ImageData):
 
             # If an indent is found, mark the grain as having one and save the mask of just the indent to the grain's dataclass
             if num_connections == 1:
-                indent_mask, is_indented = extend_indent_astar(mask_outline, indent_mask, image)
+                indent_mask_extended, is_indented = extend_indent_astar(mask_outline, indent_mask, image)
+                grain_object.indented = is_indented
                 if is_indented:
-                    grain_object.indented = True
-                    apply_indents(image_object, grain_object, indent_mask)
+                    apply_indents(image_object, grain_object, indent_mask_extended)
             elif num_connections > 1:
                 if not validate_split(full_skeleton, filled_mask):
                     props = regionprops(junc_labels)
                     for junction in props:
-                        indent_mask, is_indented = extend_indent_astar(mask_outline, indent_mask, image)
+                        indent_mask_extended, is_indented = extend_indent_astar(mask_outline, indent_mask, image)
                         if is_indented:
-                            grain_object.indented = True
-                            apply_indents(image_object, grain_object, indent_mask)
+                            apply_indents(image_object, grain_object, indent_mask_extended)
 
 
 def find_mask_junctions(mask: np.ndarray) -> np.ndarray:
@@ -489,7 +494,7 @@ def extend_indent_astar(mask_outline: np.ndarray, segment: np.ndarray, image: np
     be processed in a later step.
     """
 
-    max_ext = 7
+    max_ext = 3
 
     # 1. Find the endpoints of the segment
     kernel = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]])
@@ -503,8 +508,8 @@ def extend_indent_astar(mask_outline: np.ndarray, segment: np.ndarray, image: np
     for ep in endpoint_coords:
         y, x = ep
 
-        # 2. Get local 'tail' for heading (last 5 pixels)
-        r = 5
+        # Get direction of end of line to extend
+        r = 4
         y_min, y_max = max(0, y-r), min(segment.shape[0], y+r+1)
         x_min, x_max = max(0, x-r), min(segment.shape[1], x+r+1)
 
@@ -556,7 +561,7 @@ def extend_indent_astar(mask_outline: np.ndarray, segment: np.ndarray, image: np
     if found_any_connection:
         return segment.astype(bool) | total_additions, True
     else:
-        return mask_outline, False
+        return None, False
 
 
 def extend_split_astar(mask_outline: np.ndarray, segment: np.ndarray, image: np.ndarray):
@@ -592,8 +597,9 @@ def extend_split_astar(mask_outline: np.ndarray, segment: np.ndarray, image: np.
 
     test_mask = mask_outline | working_segment | additions
 
-    labeled_array, num_features = scipylabel(~test_mask)
+    _, num_features = scipylabel(~test_mask)
 
+    # 3 or more features being the two now-split grains and the background
     if num_features >= 3:
         return test_mask.astype(np.uint8)
 
@@ -645,7 +651,7 @@ def validate_split(skeleton: np.ndarray, original_filled_mask: np.ndarray):
     Ensure all new grains created from the split reach a minimum
     area.
     """
-    min_area_perc = 15 # % of original grain area
+    min_area_perc = 20 # % of original grain area
     min_area = (np.sum(original_filled_mask.astype(bool)) / 100) * min_area_perc
 
     split_islands = original_filled_mask.astype(bool) & ~skeleton.astype(bool)

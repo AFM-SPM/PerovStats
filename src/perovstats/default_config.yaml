@@ -19,6 +19,7 @@ segmentation:
       area_threshold: 100 # in nm2.
       disk_radius_factor: 40
   height_bias: 100 # The amount to bias towards lower (darker) points over the centre when skeletonising grain boundary in a mask. 100 means a heavy bias towards the lowest point in a grain boundary.
+  find_indents: false # WARNING: currently broken, best to leave false until updated
 pruning:
   run: true
   min_line_length: 100 # The minimum length an offshoot can be to not be considered an error and deleted.

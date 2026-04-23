@@ -21,14 +21,16 @@ def segment_image(config: dict[str, any], image_object: ImageData) -> None:
     segmentation_method = config["segmentation"]["segmentation_type"]
     if segmentation_method == "traditional":
         segment_image_traditional(config, image_object)
-        # Traditional segmentation includes indents and offshoots, which we want to find
-        # separately later so these are pruned for now.
-        prune_mask(config, image_object)
     elif segmentation_method == "cellpose":
         torch.sparse.check_sparse_tensor_invariants.disable()
         segment_image_cellpose(config, image_object)
 
-    find_splits(config, image_object)
+    # Segmentation includes indents and offshoots, which we want to find
+    # separately later so these are pruned for now.
+    prune_mask(config, image_object)
+
+    if config["segmentation"]["find_indents"]:
+        find_splits(config, image_object)
 
 
 def segment_image_cellpose(config: dict[str, any], image_object: ImageData) -> None:
@@ -78,8 +80,9 @@ def segment_image_cellpose(config: dict[str, any], image_object: ImageData) -> N
                         interpolation=cv2.INTER_NEAREST).astype(np.uint16)
 
     outlines = cellposeutils.masks_to_outlines(masks)
-    np_mask = outlines.astype(np.uint16)
-    # thick_mask = ski.morphology.dilation(np_mask, ski.morphology.disk(1))
+
+    footprint = ski.morphology.disk(3)
+    np_mask = ski.morphology.closing(outlines, footprint=footprint)
     np_mask = Skeletonisation(image_object.high_pass, np_mask, height_bias=height_bias).do_skeletonisation()
 
     image_object.mask = np_mask
@@ -140,11 +143,14 @@ def segment_image_traditional(config: dict[str, any], image_object: ImageData) -
 
         image_object.mask = np_mask
 
+        logger.success(f"[{image_object.filename}] : Mask created successfully.")
+
 
 def clean_mask(
     mask: np.ndarray,
     area_threshold: float = 100,
     disk_radius: int = 4,
+    min_hole_size: int = 64,
 ) -> np.ndarray:
     """
     Clean up grain mask by connecting close segments and removing small sections.
@@ -164,7 +170,8 @@ def clean_mask(
         Cleaned up mask array.
     """
     mask = ski.morphology.remove_small_holes(
-        ski.morphology.remove_small_objects(mask.astype(bool), max_size=area_threshold)
+        ski.morphology.remove_small_objects(mask.astype(bool), max_size=area_threshold),
+        max_size=min_hole_size
     )
     return ski.morphology.opening(mask, ski.morphology.disk(disk_radius))
 
@@ -213,7 +220,7 @@ def create_grain_mask(
     threshold = ski.filters.threshold_local(im_, block_size=threshold_block_size, offset=threshold_offset)
     # threshold = ski.filters.threshold_otsu(im_)
     mask = im_ > threshold
-    mask = clean_mask(mask, area_threshold, disk_radius) if area_threshold else mask
+    mask = clean_mask(mask, area_threshold=area_threshold, disk_radius=disk_radius) if area_threshold else mask
     selection = ski.util.invert(mask)
     skeleton = Skeletonisation(im_, selection, height_bias=height_bias).do_skeletonisation()
 
