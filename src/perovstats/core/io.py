@@ -67,7 +67,7 @@ def grain_area_histogram(data, filename, output_dir):
     data : List[float]
         A list of the datapoints (areas) for each grain.
     filename : str
-        The name of the .spm file being processed.
+        The name of the file being processed.
     output_dir : Path
         The main directory outputs are saved to.
     """
@@ -93,7 +93,7 @@ def grain_circularity_histogram(data, filename, output_dir):
     data : List[float]
         A list of the datapoints (circularity rating) for each grain.
     filename : str
-        The name of the .spm file being processed.
+        The name of the file being processed.
     output_dir : Path
         The main directory outputs are saved to.
     """

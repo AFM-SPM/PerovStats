@@ -86,7 +86,7 @@ class ImageData:
     file_directory : str
         The folder to save output data to
     filename : str
-        The name of the original .spm file without the extension
+        The name of the original file without the extension
     mask_rgb : np.ndarray
         Image of the mask with grains coloured in for easier viewing.
     grains_per_nm2 : float

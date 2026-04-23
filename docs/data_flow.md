@@ -1,11 +1,11 @@
 # Data Flow
 
 ## Input
-- PerovStats takes .spm files as an input, as well as a config file (`default_config.yaml` by default) containing values for variables including the expected location of the `.spm` files to process.
+- PerovStats takes AFM scan files as an input, as well as a config file (`default_config.yaml` by default) containing values for variables including the expected location of the files to process.
 
 ## Processing steps
 The program will:
-1. Loads the `.spm` file and convert to an image mask
+1. Loads the file and convert to an image mask
 2. Performs a fourier transform to isolate the topograhy of the perovskite material
 3. Optionally detect and remove smear areas from the high-pass so grains aren't detected ther in error
 4. Analyses this new image and generate a mask outlining the edges of grains
@@ -13,7 +13,7 @@ The program will:
 6. Exports this data to `.csv` files along with a copy of the configuration options used in a `.yaml` file
 
 ## Output
-All output data is by default saved to a sub-folder with the same name as the original `.spm` file under an `/output/` directory (editable in the config).
+All output data is by default saved to a sub-folder with the same name as the original file under an `/output/` directory (editable in the config).
 
 The folder contains:
 - An `images` folder of `.png` files for:
