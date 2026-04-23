@@ -1,17 +1,16 @@
 from __future__ import annotations
-import heapq
 
 from loguru import logger
-from scipy.ndimage import distance_transform_edt
 import skimage as ski
 import numpy as np
 from cellpose import models, core
 from cellpose import utils as cellposeutils
 import cv2
+import torch
 
 from .core.classes import ImageData
-from .core.image_processing import get_local_pixels_binary
-from .pruning import prune_mask
+from .core.utils import Skeletonisation
+from .pruning import prune_mask, find_splits
 
 
 def segment_image(config: dict[str, any], image_object: ImageData) -> None:
@@ -22,11 +21,16 @@ def segment_image(config: dict[str, any], image_object: ImageData) -> None:
     segmentation_method = config["segmentation"]["segmentation_type"]
     if segmentation_method == "traditional":
         segment_image_traditional(config, image_object)
-        # Traditional segmentation includes indents and offshoots, which we want to find
-        # separately later so these are pruned for now.
-        prune_mask(config, image_object)
     elif segmentation_method == "cellpose":
+        torch.sparse.check_sparse_tensor_invariants.disable()
         segment_image_cellpose(config, image_object)
+
+    # Segmentation includes indents and offshoots, which we want to find
+    # separately later so these are pruned for now.
+    prune_mask(config, image_object)
+
+    if config["segmentation"]["find_indents"]:
+        find_splits(config, image_object)
 
 
 def segment_image_cellpose(config: dict[str, any], image_object: ImageData) -> None:
@@ -76,8 +80,9 @@ def segment_image_cellpose(config: dict[str, any], image_object: ImageData) -> N
                         interpolation=cv2.INTER_NEAREST).astype(np.uint16)
 
     outlines = cellposeutils.masks_to_outlines(masks)
-    np_mask = outlines.astype(np.uint16)
-    # thick_mask = ski.morphology.dilation(np_mask, ski.morphology.disk(1))
+
+    footprint = ski.morphology.disk(3)
+    np_mask = ski.morphology.closing(outlines, footprint=footprint)
     np_mask = Skeletonisation(image_object.high_pass, np_mask, height_bias=height_bias).do_skeletonisation()
 
     image_object.mask = np_mask
@@ -138,11 +143,14 @@ def segment_image_traditional(config: dict[str, any], image_object: ImageData) -
 
         image_object.mask = np_mask
 
+        logger.success(f"[{image_object.filename}] : Mask created successfully.")
+
 
 def clean_mask(
     mask: np.ndarray,
     area_threshold: float = 100,
     disk_radius: int = 4,
+    min_hole_size: int = 64,
 ) -> np.ndarray:
     """
     Clean up grain mask by connecting close segments and removing small sections.
@@ -162,7 +170,8 @@ def clean_mask(
         Cleaned up mask array.
     """
     mask = ski.morphology.remove_small_holes(
-        ski.morphology.remove_small_objects(mask.astype(int), max_size=area_threshold)
+        ski.morphology.remove_small_objects(mask.astype(bool), max_size=area_threshold),
+        max_size=min_hole_size
     )
     return ski.morphology.opening(mask, ski.morphology.disk(disk_radius))
 
@@ -211,163 +220,8 @@ def create_grain_mask(
     threshold = ski.filters.threshold_local(im_, block_size=threshold_block_size, offset=threshold_offset)
     # threshold = ski.filters.threshold_otsu(im_)
     mask = im_ > threshold
-    mask = clean_mask(mask, area_threshold, disk_radius) if area_threshold else mask
+    mask = clean_mask(mask, area_threshold=area_threshold, disk_radius=disk_radius) if area_threshold else mask
     selection = ski.util.invert(mask)
     skeleton = Skeletonisation(im_, selection, height_bias=height_bias).do_skeletonisation()
 
     return skeleton
-
-
-class Skeletonisation:
-    """
-    Skeletonise a binary array following Zhang's algorithm (Zhang and Suen, 1984).
-
-    Modifications are made to the published algorithm during the removal step to remove a fraction of the smallest pixel
-    values opposed to all of them in the aforementioned algorithm. All operations are performed on the mask entered.
-
-    Parameters
-    ----------
-    image : npt.NDArray
-        Original 2D image containing the height data.
-    mask : npt.NDArray
-        Binary image containing the object to be skeletonised. Dimensions should match those of 'image'.
-    height_bias : float
-        Ratio of lowest intensity (height) pixels to total pixels fitting the skeletonisation criteria. 1 is all pixels
-        smiilar to Zhang.
-    """
-    def __init__(self, image: np.ndarray, mask: np.ndarray, height_bias: float = 0.6):
-        """
-        Initialise the class.
-
-        Parameters
-        ----------
-        image : npt.NDArray
-            Original 2D image containing the height data.
-        mask : npt.NDArray
-            Binary image containing the object to be skeletonised. Dimensions should match those of 'image'.
-        height_bias : float
-            Ratio of lowest intensity (height) pixels to total pixels fitting the skeletonisation criteria.
-        """
-        # Extend the image/ mask by mirroring to avoid edge effects
-        self.image = np.pad(image, pad_width=1, mode='edge')
-        self.mask = np.pad(mask, pad_width=1, mode='edge')
-        self.height_bias = height_bias
-
-
-    def do_skeletonisation(self) -> np.ndarray:
-        """
-        Perform skeletonisation.
-
-        Returns
-        -------
-        npt.NDArray
-            The single pixel thick, skeletonised array.
-        """
-        priority_map = self.calculate_priority_map()
-        self.skeletonise_with_bias(priority_map)
-
-        # Remove padding added in __init__() to handle edge pixels
-        self.iamge = self.image[1:-1, 1:-1]
-        self.mask = self.mask[1:-1, 1:-1]
-
-        return ski.morphology.skeletonize(self.mask)
-
-
-    def calculate_priority_map(self) -> np.ndarray:
-        """
-        Create an array of size mask.shape containing priority scores for each pixel.
-
-        The scores are calculated with: score = distance_to_edge + (1.0 - normalised_height) * height_bias
-        This means a higher height bias reduces the importance of the pixel being in the centre of the line
-        being skeletonised.
-
-        Returns
-        -------
-        np.ndarray
-            The priority map for each pixel in the image. Pixels not part of the mask are marked as 0.
-        """
-        # Create array of shape mask.shape with score of distance from edge
-        dist = distance_transform_edt(self.mask)
-
-        # Normalise the heightmap
-        img_min, img_max = self.image.min(), self.image.max()
-        norm_height = (self.image - img_min) / (img_max - img_min + 1e-8)
-
-        # Combine the two arrays - (1.0 - norm_height to delete lighter pixels)
-        priority_map = dist + (1.0 - norm_height) * self.height_bias
-
-        return priority_map
-
-
-    def skeletonise_with_bias(self, priority_map):
-        """
-        Loop through pixels in the mask and queue the boundary pixels, then loop through the
-        created queue and check each for deletability. If so, delete and add its neighbouring pixels
-        to the queue as they are now boundary pixels.
-        """
-        height, width = self.mask.shape
-        queue = []
-        queue_map = np.zeros_like(self.mask, dtype=bool) # Boolean map of if the pixel is in queue
-
-        # Find all potential pixels to delete
-        for row in range(1, height-1):
-            for col in range(1, width-1):
-                if self.mask[row, col] == 1:
-                    # If a 1 touches a 0 it is a boundary pixel
-                    if np.min(self.mask[row-1:row+2, col-1:col+2]) == 0:
-                        heapq.heappush(queue, (priority_map[row, col], row, col))
-                        queue_map[row, col] = True
-
-        while queue:
-            _, row, col = heapq.heappop(queue)
-            queue_map[row, col] = False
-            # Skip if it's been removed from the mask
-            if self.mask[row, col] == 0:
-                continue
-
-            if self._is_safe_to_delete(row, col):
-                self.mask[row, col] = 0
-                # Add neighbours in remaining mask to queue as they have become boundaries
-                for dirrow, dircol in [(-1,0), (1,0), (0,-1), (0,1), (-1,-1), (-1,1), (1,-1), (1,1)]:
-                    newrow, newcol = row + dirrow, col + dircol
-                    if self.mask[newrow, newcol] == 1 and not queue_map[newrow, newcol]:
-                        heapq.heappush(queue, (priority_map[newrow, newcol], newrow, newcol))
-                        queue_map[newrow, newcol] = True
-            else: # Skip if pixel is not safe to delete
-                pass
-
-
-    def _is_safe_to_delete(self, row, col) -> bool:
-        """
-        Checks if a pixel can be safely deleted. This is determined by checking
-        neighoburing pixels and confirming the pixel is not at the end (only 1 neighbour)
-        or that it isn't.
-
-        Returns
-        -------
-        bool
-            If the pixel is determined to be on the edge of a 'blob' and will not shrink the
-            structure of the skeleton by deleting return true, else return false.
-        """
-        height, width = self.mask.shape
-        if row <= 0 or row >= height - 1 or col <= 0 or col >= width - 1:
-            return False
-
-        p = get_local_pixels_binary(self.mask, row, col)
-        neighbours = [p[1], p[2], p[4], p[7], p[6], p[5], p[3], p[0]]
-
-        # Check that the pixel is not at the end of a line or an isolated dot (num_neighbours < 2)
-        # and that the pixel is not surrounded (num_neighbours > 6)
-        num_neighbours = sum(neighbours)
-        if num_neighbours < 2 or num_neighbours > 6:
-            return False
-
-        # Check the pixel's neighbours in a circle, every time a neighbour is 0 and the next one is
-        # 1 count that as a transition. A central pixel on the edge of a block will always have one
-        # single transition.
-        transitions = 0
-        for i in range(len(neighbours)):
-            if neighbours[i] == 0 and neighbours[(i+1) % 8] == 1:
-                transitions += 1
-
-        return transitions == 1

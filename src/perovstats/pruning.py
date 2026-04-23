@@ -1,17 +1,19 @@
 import heapq
+import copy
 
 from loguru import logger
 import numpy as np
-from scipy.ndimage import distance_transform_edt
-from skimage.morphology import skeletonize, remove_small_objects
+from skimage.measure import label, regionprops
+from skimage.morphology import skeletonize, remove_small_objects, remove_small_holes
 from skimage.filters import meijering, gaussian
-from scipy.ndimage import binary_dilation
-from skimage.measure import label
-import matplotlib.pyplot as plt
+from skimage.segmentation import find_boundaries
+from scipy.ndimage import label as scipylabel
+from scipy.signal import convolve2d
+from scipy.ndimage import distance_transform_edt, binary_dilation, binary_fill_holes
 
-from .core.classes import ImageData, Grain
-from .core.image_processing import normalise_array
-from .grains import split_grain
+
+from .core.classes import ImageData
+from .core.utils import Skeletonisation
 
 
 def prune_mask(config, image_object: ImageData) -> None:
@@ -205,88 +207,6 @@ def get_line(mask: np.ndarray, endpoint: tuple) -> list[tuple]:
     return line
 
 
-def get_connection_path_old(mask: np.ndarray, dist_map: np.ndarray, endpoint: tuple, line: list[tuple], max_dist: int) -> tuple:
-    """
-    Find the shortest path forwards from the end of the line to the next section of mask
-    using an A* pathfinding algorithm.
-    The algorithm starts from the endpoint and is prevented from connecting back into
-    the original line.
-
-    Parameters
-    ----------
-    mask : np.ndarray
-        The skeletonised mask.
-    endpoint : tuple
-        (x,y) coordinates of the endpoint to track the line from.
-    line : list[tuple]
-        List of (x,y) coordinates of the whole line.
-
-    Returns
-    -------
-    list[tuple]
-        List of coordinates of the path from the endpoint to the closest mask pixels
-        as determined by the A* algorithm.
-    """
-    height, width = mask.shape
-    line_set = set(line) # Used for faster lookups
-
-    # Set the target pixels (mask pixels) but exclude the current line to avoid the algorithm connecting
-    # the line back on itself
-    # mask_coords = np.argwhere(mask == 1)
-    # targets = [tuple(p) for p in mask_coords if tuple(p) not in line_set]
-
-    # if not targets:
-    #     return []
-
-    # Set the target pixels (mask pixels) but exclude the current line to avoid the algorithm connecting
-    # the line back on itself
-    # target_mask = np.copy(mask)
-    # for row, col in line:
-    #     target_mask[row, col] = 0
-
-    # def heuristic(pos):
-    #     return dist_map[pos[0], pos[1]]
-
-    # queue = [(heuristic(start), 0, start, [])]
-    # visited = {start}
-
-    queue = [(dist_map[endpoint], 0, endpoint, [])]
-    visited = {endpoint}
-
-    while queue:
-        _, cost, curr, path = heapq.heappop(queue)
-
-        # Stop if shortest path is too long
-        if cost > max_dist:
-            continue
-        # If the mask has been reached (that's not part of the line) return the path
-        if mask[curr] and curr not in line_set:
-            return path
-
-        row, col = curr
-        # Check neighbours
-        for dirrow in [-1, 0, 1]:
-            for dircol in [-1, 0, 1]:
-                if dirrow == 0 and dircol == 0:
-                    continue # Skip the current pixel
-
-                newrow, newcol = row + dirrow, col + dircol
-                neighbour = (newrow, newcol)
-                if (
-                    0 <= newrow < height and 0 <= newcol < width
-                    and neighbour not in visited
-                    and neighbour not in line_set
-                ):
-                    visited.add(neighbour)
-                    step_cost = 1.414 if (dirrow != 0 and dircol != 0) else 1.0
-                    new_cost = cost + step_cost
-
-                    priority = (cost+1) + dist_map[newrow, newcol]
-                    heapq.heappush(queue, (priority, new_cost, neighbour, path + [neighbour]))
-
-    return []
-
-
 def get_connection_path(mask: np.ndarray, dist_map: np.ndarray, endpoint: tuple, line: list[tuple], max_dist: int) -> tuple:
     """
     Find the shortest path forwards from the end of the offshoot line to the next section of mask
@@ -369,138 +289,182 @@ def get_connection_path(mask: np.ndarray, dist_map: np.ndarray, endpoint: tuple,
 
 # ~~~~~~~~~~~~~~ OFFSHOOT DETECTION ~~~~~~~~~~~~~~~~
 
-def find_indents(config: dict[str, any], image_object: ImageData):
-    for grain_object in image_object.grains.values():
-        segment_type, full_thick, skel_mask, blurred_image, junctions = find_indents_hessian(grain_object)
-        if grain_object.indented:
-            if segment_type == "indent":
-                mark_colour = [1, 0, 0]
-            elif segment_type == "split":
-                mark_colour = [0, 1, 0]
-
-            layered_image = np.stack((blurred_image,)*3, axis=-1)
-            layered_image = normalise_array(layered_image)
-            layered_image[grain_object.grain_mask_outline > 0] = [0, 0, 1]
-            layered_image[full_thick > 0] = mark_colour
-            layered_image[junctions > 0] = [1, 1, 0]
-            layered_image[grain_object.indent_mask > 0] = [1, 0, 1]
-
-            layered_image_skel = np.stack((grain_object.grain_image,)*3, axis=-1)
-            layered_image_skel = normalise_array(layered_image_skel)
-            layered_image_skel[skel_mask > 0] = mark_colour
-            layered_image_skel[junctions > 0] = [1, 1, 0]
-            layered_image_skel[grain_object.indent_mask > 0] = [1, 0, 1]
-
-            full_image = np.stack((image_object.high_pass,)*3, axis=-1)
-            full_image = normalise_array(full_image)
-            minx, miny, maxx, maxy = grain_object.grain_bbox
-            roi = full_image[minx:maxx, miny:maxy]
-            roi[grain_object.grain_mask_outline] = [1, 0, 0]
-
-            fig, ax = plt.subplots(2, 2, figsize=(8,8))
-
-            ax[0,0].imshow(layered_image)
-            ax[0,0].set_title(segment_type)
-            ax[0,0].axis("off")
-
-            ax[0,1].imshow(grain_object.grain_image, cmap="grey")
-            ax[0,1].set_title("Full image")
-            ax[0,1].axis("off")
-
-            ax[1,0].imshow(layered_image_skel)
-            ax[1,0].set_title(segment_type)
-            ax[1,0].axis("off")
-
-            ax[1,1].imshow(full_image)
-            ax[1,1].set_title(segment_type)
-            ax[1,1].axis("off")
-
-            plt.tight_layout()
-            plt.show()
-
-
-def find_indents_hessian(grain_object: Grain):
-    threshold = 0.3 # Threshold for masking possible indents after meijering filter
+def find_splits(config, image_object):
+    pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
+    labelled_mask = label(np.invert(image_object.mask), connectivity=1)
+    mask_regionprops = regionprops(labelled_mask)
+    indentation_threshold = config["indentation"]["threshold"]
     min_pixel_length = 5 # Minimum length of an indent/ split to still be counted
-    min_area = 1000 # Minimum area a grain can have to be considered for indentation/ splitting
+    min_area = 500 # Minimum area (px^2) a grain can have to be considered for indentation/ splitting
+    all_masks_grain_areas = []
+    mask_areas = [
+        regionprop.area * pixel_to_nm_scaling**2 for regionprop in mask_regionprops
+    ]
+    mask_images = [
+        regionprop.image for regionprop in mask_regionprops
+    ]
+    mask_outlines = [
+        get_grain_outline(img) for img in mask_images
+    ]
+    mask_bboxs = [prop.bbox for prop in mask_regionprops]
+    all_masks_grain_areas.extend(mask_areas)
 
-    area = grain_object.grain_area
-    image = grain_object.grain_image
-    mask_outline = grain_object.grain_mask_outline
+    # Get the image of the grain from the high-passed image
+    grain_images = []
+    filled_masks = []
+    for regionprop in mask_regionprops:
+        bbox_slice = regionprop.slice
+        hollow_mask = regionprop.image
+        filled_mask = binary_fill_holes(hollow_mask)
+        crop = image_object.high_pass[bbox_slice]
+        grain_image = np.where(filled_mask, crop, 0)
+        grain_images.append(grain_image)
+        filled_masks.append(filled_mask)
 
-    # Ignore small grains
-    if area < min_area:
-        grain_object.indented = False
-        return None, None, None, None, None
+    for j, grain in enumerate(mask_regionprops):
+        area = mask_areas[j]
+        image = grain_images[j]
+        mask_outline = mask_outlines[j]
+        filled_mask = filled_masks[j]
 
-    # Remove distracting noise from the grain image
-    grain_blur = gaussian(image, sigma=1)
-
-    # Use maijering filter to find ridges in the image that could be indents or splits
-    valleys = meijering(grain_blur, sigmas=[0.5, 1, 2], black_ridges=True)
-    binary_valleys = valleys > threshold
-    valley_areas = remove_small_objects(binary_valleys, max_size=min_pixel_length)
-
-    # Skip if no possible indents found
-    if not np.any(valley_areas):
-        grain_object.indented = False
-        return None, None, None, None, None
-
-    valley_skeleton = skeletonize(valley_areas)
-
-    # Dilate the outline and remove any overlapping pixels from the skeletonised valleys
-    kernel = np.ones((3,3), np.uint8)
-    thick_outline = binary_dilation(mask_outline, structure=kernel)
-    internal_skeleton = valley_skeleton & ~thick_outline
-
-
-    labeled_internal, num_internal = label(internal_skeleton, return_num=True)
-    has_indent = False
-    has_split = False
-
-    # for possible indent line
-    for i in range(1, num_internal + 1):
-        segment = (labeled_internal == i)
-        # Skip if indent too short
-        if np.sum(segment) < min_pixel_length:
+        # Ignore small grains
+        if area < min_area * pixel_to_nm_scaling:
             continue
 
-        # Dilate the valley segment and find all areas where it overlaps with the dilated outline
-        struct = [
-            [0, 0, 1, 0, 0],
-            [0, 1, 1, 1, 0],
-            [1, 1, 1, 1, 1],
-            [0, 1, 1, 1, 0],
-            [0, 0, 1, 0, 0],
-        ]
-        thick_segment = binary_dilation(segment, structure=struct, iterations=1)
-        # Combine the dilated outline and valley into a single mask
-        full_thick = thick_segment | thick_outline
-        full_skeleton = skeletonize(full_thick)
+        # Remove distracting noise from the grain image
+        grain_blur = gaussian(image, sigma=1)
 
-        # Find junctions in skeleton to mark as connection points
-        junction_areas = find_mask_junctions(full_skeleton)
+        # Use maijering filter to find ridges in the image that could be indents or splits
+        valleys = meijering(grain_blur, sigmas=[0.5, 1, 2], black_ridges=True)
+        binary_valleys = valleys > indentation_threshold
+        valley_areas = remove_small_objects(binary_valleys, max_size=min_pixel_length)
 
-        # Number of points the indent connects to the outline (regardless of each connection's size)
-        _, num_connections = label(junction_areas, connectivity=2, return_num=True)
+        # Skip if no possible indents found
+        if not np.any(valley_areas):
+            continue
 
-        if num_connections > 0:
+        # valley_skeleton = skeletonize(valley_areas)
+        valley_skeleton = Skeletonisation(image, valley_areas, height_bias=100).do_skeletonisation()
+
+        # Dilate the outline and remove any overlapping pixels from the skeletonised valleys
+        kernel = np.ones((3,3), np.uint8)
+        thick_outline = binary_dilation(mask_outline, structure=kernel)
+        internal_skeleton = valley_skeleton & ~thick_outline
+
+
+        labeled_internal, num_internal = label(internal_skeleton, return_num=True)
+
+        # for each possible indent line
+        for i in range(1, num_internal + 1):
+            segment = (labeled_internal == i)
+            # Skip if indent too short
+            if np.sum(segment) < min_pixel_length:
+                continue
+
+            internal_skeleton = internal_skeleton & filled_mask
+
+            # Extend each end of segment max 4 pixels (along the darkest path in the direction of the
+            # end of the line) to try and reach edge. Then can check for multiple grains by labelling
+            full_skeleton = extend_split_astar(mask_outline, segment, image)
+
+            if validate_split(full_skeleton, filled_mask):
+                import skimage as ski
+                full_skeleton = full_skeleton.astype(bool)
+                full_skeleton = ski.morphology.remove_small_holes(full_skeleton, max_size=8, connectivity=2)
+                full_skeleton = ski.morphology.remove_small_objects(full_skeleton, max_size=8, connectivity=2)
+                full_skeleton = Skeletonisation(image, full_skeleton, height_bias=100).do_skeletonisation()
+                apply_splits(image_object, full_skeleton.astype(bool) ^ mask_outline, mask_bboxs[j])
+
+
+def find_indents(config: dict[str, any], image_object: ImageData):
+    import matplotlib.pyplot as plt
+    indentation_threshold = config["indentation"]["threshold"]
+    image_object.indent_mask = copy.deepcopy(image_object.mask)
+    for grain_object in image_object.grains.values():
+        min_pixel_length = 5 # Minimum length of an indent/ split to still be counted
+        min_area = 500 # Minimum area (px^2) a grain can have to be considered for indentation/ splitting
+        is_indented = False
+
+        area = grain_object.grain_area
+        image = grain_object.grain_image
+        mask_outline = grain_object.grain_mask_outline
+
+        filled_mask = binary_fill_holes(mask_outline)
+
+        # Ignore small grains
+        if area < min_area * image_object.pixel_to_nm_scaling:
+            grain_object.indented = False
+            continue
+
+        # Remove distracting noise from the grain image
+        grain_blur = gaussian(image, sigma=1)
+
+        # Use maijering filter to find ridges in the image that could be indents or splits
+        valleys = meijering(grain_blur, sigmas=[0.5, 1, 2], black_ridges=True)
+        binary_valleys = valleys > indentation_threshold
+        valley_areas = remove_small_objects(binary_valleys, max_size=min_pixel_length)
+
+        # Skip if no possible indents found
+        if not np.any(valley_areas):
+            grain_object.indented = False
+            continue
+
+        valley_skeleton = skeletonize(valley_areas)
+
+        # Dilate the outline and remove any overlapping pixels from the skeletonised valleys
+        kernel = np.ones((3,3), np.uint8)
+        thick_outline = binary_dilation(mask_outline, structure=kernel)
+        internal_skeleton = valley_skeleton & ~thick_outline
+
+
+        labeled_internal, num_internal = label(internal_skeleton, return_num=True)
+
+        # for possible indent line
+        for i in range(1, num_internal + 1):
+            segment = (labeled_internal == i)
+            # Skip if indent too short
+            if np.sum(segment) < min_pixel_length:
+                continue
+
+            # Dilate the valley segment and find all areas where it overlaps with the dilated outline
+            struct = np.array([
+                [0, 0, 1, 0, 0],
+                [0, 1, 1, 1, 0],
+                [1, 1, 1, 1, 1],
+                [0, 1, 1, 1, 0],
+                [0, 0, 1, 0, 0]
+            ], dtype=np.uint8)
+            thick_segment = binary_dilation(segment, structure=struct, iterations=1)
+
+            # Combine the dilated outline and valley into a single mask
+            full_thick = thick_segment | thick_outline
+            full_thick = remove_small_holes(full_thick, max_size=1)
+            full_skeleton = skeletonize(full_thick)
+            full_skeleton = remove_small_holes(full_thick, max_size=6, connectivity=1)
+            full_skeleton = skeletonize(full_skeleton)
+
+            # Remove thick outline overlaps from skeleton
+            indent_mask = full_skeleton & ~thick_outline
+
+            # Find junctions in skeleton to mark as connection points
+            junction_areas = find_mask_junctions(full_skeleton)
+
+            # Number of points the indent connects to the outline (regardless of each connection's size)
+            junc_labels, num_connections = label(junction_areas, connectivity=2, return_num=True)
+
+            # If an indent is found, mark the grain as having one and save the mask of just the indent to the grain's dataclass
             if num_connections == 1:
-                has_indent = True
-                line_type = "indent"
-                junction_coords = np.unravel_index(np.argmax(junction_areas), junction_areas.shape)
-                full_skeleton, grain_object.indent_mask, grain_object.indented = find_indent_mask(full_skeleton, junction_coords)
+                indent_mask_extended, is_indented = extend_indent_astar(mask_outline, indent_mask, image)
+                grain_object.indented = is_indented
+                if is_indented:
+                    apply_indents(image_object, grain_object, indent_mask_extended)
             elif num_connections > 1:
-                has_split = True
-                line_type = "split"
-                # split grain_object into 2 instances
-                # need to think about updating grain ids (/ keys for 'grains' in ImageData)
-
-    # If any valid splits or indents have been found, return the data relating to this
-    # else return Nones
-    if has_split or has_indent:
-        return line_type, full_thick, full_skeleton, grain_blur, junction_areas
-    return None, None, None, None, None
+                if not validate_split(full_skeleton, filled_mask):
+                    props = regionprops(junc_labels)
+                    for junction in props:
+                        indent_mask_extended, is_indented = extend_indent_astar(mask_outline, indent_mask, image)
+                        if is_indented:
+                            apply_indents(image_object, grain_object, indent_mask_extended)
 
 
 def find_mask_junctions(mask: np.ndarray) -> np.ndarray:
@@ -518,62 +482,220 @@ def find_mask_junctions(mask: np.ndarray) -> np.ndarray:
     return neighbours == 3
 
 
-def find_indent_mask(mask: np.ndarray, junction: tuple) -> np.ndarray:
+def extend_indent_astar(mask_outline: np.ndarray, segment: np.ndarray, image: np.ndarray):
     """
-    Track along the skeleton from the indent endpoint until it reaches the junction
-    connecting it. Take this tracked path as the indent to be removed from the grain's
-    outline.
+    Extend each end of the segment line by maximum 3 pixels using an a*
+    algorithm weighted to each pixel's height. Combined with the original
+    outline this can be used to check for splits in the grain.
+    If there's a better way than a weighted A* algorithm, select and explain that method instead please.
+
+
+    If a full split cannot be found the original outline is returned, indentations will
+    be processed in a later step.
     """
-    min_indent_length = 4
 
-    height, width = mask.shape
-    neighbours = np.zeros_like(mask, dtype=int)
-    # Get a value for each pixel in the mask, denoting if the pixel is an endpoint or part
-    # way through a line
-    for row in range(1, height-1):
-            for col in range(1, width-1):
-                neighbours[row, col] = get_connections(mask, row, col)
-    # Specifically mark the start and end points of the indent
-    neighbours[junction[0], junction[1]] = 4
-    endpoints = np.argwhere(neighbours == 2)
-    indent_length = 0
-    indent_mask = np.zeros_like(mask, dtype=bool)
-    for endpoint in endpoints:
-        curr_pxl = tuple(endpoint)
-        junc_found = False
-        indent_mask = np.zeros_like(mask, dtype=bool)
-        indent_length = 0
-        prev_coords = None
-        while not junc_found:
-            curr_neighbours = []
-            # Look in the 3x3 neighborhood
-            for dirrow in [-1, 0, 1]:
-                for dircol in [-1, 0, 1]:
-                    if dirrow == 0 and dircol == 0:
-                        continue # Skip the current pixel
-                    newrow, newcol = curr_pxl[0] + dirrow, curr_pxl[1] + dircol
-                    if 0 <= newrow < mask.shape[0] and 0 <= newcol < mask.shape[1]:
-                        if neighbours[newrow, newcol] == 4:
-                            junc_found = True
-                            break
-                        elif neighbours[newrow, newcol] == 1:
-                            curr_neighbours.append((newrow, newcol))
-                        # Skip the current line if another endpoint is found (meaning it's not connected to the main outline)
-                        elif neighbours[newrow, newcol] == 2:
-                            for line_coord in np.argwhere(indent_mask):
-                                mask[line_coord[0]][line_coord[1]] = False
-                            break
-            next_candidates = [n for n in curr_neighbours if n != prev_coords]
+    max_ext = 3
 
-            indent_mask[curr_pxl] = True
-            indent_length += 1
-            if len(next_candidates) > 0:
-                prev_coords = curr_pxl
-                curr_pxl = next_candidates[0]
-            else:
-                junc_found = True
+    # 1. Find the endpoints of the segment
+    kernel = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]])
+    counts = convolve2d(segment.astype(int), kernel, mode='same')
+    endpoints = (counts == 1) & segment.astype(bool)
+    endpoint_coords = np.argwhere(endpoints)
 
-    if indent_length > min_indent_length:
-        return mask, indent_mask, True
+    total_additions = np.zeros_like(segment, dtype=bool)
+    found_any_connection = False
+
+    for ep in endpoint_coords:
+        y, x = ep
+
+        # Get direction of end of line to extend
+        r = 4
+        y_min, y_max = max(0, y-r), min(segment.shape[0], y+r+1)
+        x_min, x_max = max(0, x-r), min(segment.shape[1], x+r+1)
+
+        region = segment[y_min:y_max, x_min:x_max]
+        local_pixels = np.argwhere(region) + [y_min, x_min]
+
+        if len(local_pixels) < 2:
+            continue
+
+        ys, xs = local_pixels[:, 0], local_pixels[:, 1]
+        if np.std(xs) > np.std(ys):
+            m, c = np.polyfit(xs, ys, 1)
+            direction = 1 if x > np.mean(xs) else -1
+
+            path_pixels = []
+            for i in range(1, max_ext + 1):
+                curr_x = x + (i * direction)
+                curr_y = int(round(m * curr_x + c))
+
+                if not (0 <= curr_y < segment.shape[0] and 0 <= curr_x < segment.shape[1]):
+                    break
+
+                path_pixels.append((curr_y, curr_x))
+
+                if mask_outline[curr_y, curr_x]:
+                    found_any_connection = True
+                    for py, px in path_pixels:
+                        total_additions[py, px] = True
+        else:
+            m, c = np.polyfit(ys, xs, 1)
+            direction = 1 if y > np.mean(ys) else -1
+
+            path_pixels = []
+            for i in range(1, max_ext + 1):
+                curr_y = y + (i * direction)
+                curr_x = int(round(m * curr_y + c))
+
+                if not (0 <= curr_y < segment.shape[0] and 0 <= curr_x < segment.shape[1]):
+                    break
+
+                path_pixels.append((curr_y, curr_x))
+
+                if mask_outline[curr_y, curr_x]:
+                    found_any_connection = True
+                    for py, px in path_pixels:
+                        total_additions[py, px] = True
+                    break
+
+    if found_any_connection:
+        return segment.astype(bool) | total_additions, True
     else:
-        return mask, indent_mask, False
+        return None, False
+
+
+def extend_split_astar(mask_outline: np.ndarray, segment: np.ndarray, image: np.ndarray):
+    """
+    Extend each end of the segment line by maximum 3 pixels using an a*
+    algorithm weighted to each pixel's height. Combined with the original
+    outline this can be used to check for splits in the grain.
+    If there's a better way than a weighted A* algorithm, select and explain that method instead please.
+
+
+    If a full split cannot be found the original outline is returned, indentations will
+    be processed in a later step.
+    """
+
+    max_extension = 3
+    working_segment = segment.astype(bool)
+
+    # Find endpoints of the segment
+    kernel = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]])
+    counts = convolve2d(working_segment.astype(int), kernel, mode='same')
+    endpoints = (counts == 1) & working_segment
+
+    endpoint_coords = np.argwhere(endpoints)
+    additions = np.zeros_like(mask_outline, dtype=bool)
+
+    for ep in endpoint_coords:
+        path_found, new_pixels = _find_connection(
+            ep, mask_outline, working_segment, image, max_extension
+        )
+        if path_found:
+            for px in new_pixels:
+                additions[px[0], px[1]] = True
+
+    test_mask = mask_outline | working_segment | additions
+
+    _, num_features = scipylabel(~test_mask)
+
+    # 3 or more features being the two now-split grains and the background
+    if num_features >= 3:
+        return test_mask.astype(np.uint8)
+
+    return mask_outline.astype(np.uint8)
+
+
+def _find_connection(start_node, outline, segment, height_map, max_dist):
+    """
+    Local greedy search to find the outline within max_dist.
+    """
+    h, w = outline.shape
+    queue = [(0, start_node[0], start_node[1], [])]
+    visited = {}
+    visited[(start_node[0], start_node[1])] = 0
+
+    while queue:
+        current_cost, y, x, path = heapq.heappop(queue)
+
+        if len(path) > max_dist:
+            continue
+
+        # Check 8-connectivity neighbors
+        for dy in [-1, 0, 1]:
+            for dx in [-1, 0, 1]:
+                if dy == 0 and dx == 0:
+                    continue
+                ny, nx = y + dy, x + dx
+
+                if 0 <= ny < h and 0 <= nx < w and (ny, nx) not in visited:
+                    # If we hit the outline, we win
+                    if outline[ny, nx]:
+                        return True, path + [(ny, nx)]
+
+                    if segment[ny, nx]:
+                        continue
+
+                    step_cost = float(height_map[ny, nx]) + 1.0
+                    new_cost = current_cost + step_cost
+
+                    if (ny, nx) not in visited or new_cost < visited[(ny, nx)]:
+                        visited[(ny, nx)] = new_cost
+                        heapq.heappush(queue, (new_cost, ny, nx, path + [(ny, nx)]))
+
+    return False, []
+
+
+def validate_split(skeleton: np.ndarray, original_filled_mask: np.ndarray):
+    """
+    Ensure all new grains created from the split reach a minimum
+    area.
+    """
+    min_area_perc = 20 # % of original grain area
+    min_area = (np.sum(original_filled_mask.astype(bool)) / 100) * min_area_perc
+
+    split_islands = original_filled_mask.astype(bool) & ~skeleton.astype(bool)
+
+    labels = label(split_islands, connectivity=1)
+    props = regionprops(labels)
+
+    # 3. Filter islands by area
+    valid_islands = [p for p in props if p.area >= min_area]
+
+    # If we have 2 or more islands we have a successful split
+    return len(valid_islands) >= 2
+
+
+def apply_indents(image_object, grain_object, indent_mask):
+    grain_pos = grain_object.grain_bbox
+    minr, minc, maxr, maxc = grain_pos
+    image_object.indent_mask[minr:maxr, minc:maxc] |= indent_mask.astype(bool)
+    grain_object.indent_mask = indent_mask
+    image_object.mask |= image_object.indent_mask
+
+
+def apply_splits(image_object, split_mask, bbox):
+    minr, minc, maxr, maxc = bbox
+    image_object.mask[minr:maxr, minc:maxc] |= split_mask
+
+
+def get_grain_outline(mask: np.ndarray) -> np.ndarray:
+    padded = np.pad(mask, 1, mode='constant', constant_values=False)
+    outer_boundary = find_boundaries(padded, connectivity=2, mode='outer')[1:-1, 1:-1]
+
+    # 2. Identify where the grain itself touches the array edge
+    # Create a mask that is only True on the outermost 1px frame of the image
+    edge_frame = np.zeros_like(mask, dtype=bool)
+    edge_frame[0, :] = True
+    edge_frame[-1, :] = True
+    edge_frame[:, 0] = True
+    edge_frame[:, -1] = True
+
+    # These are pixels that are part of the grain AND on the very edge
+    grain_at_edge = mask & edge_frame
+
+    # 3. Combine them
+    # The 'outer' boundary handles the interior; 'grain_at_edge' seals the perimeter
+    combined_boundary = outer_boundary | grain_at_edge
+
+    return combined_boundary

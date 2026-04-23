@@ -12,7 +12,6 @@ from .segmentation import segment_image
 from .grains import find_grains
 from .fourier import split_frequencies
 from .smears import find_smear_areas
-from .pruning import find_indents
 
 
 def process(
@@ -81,9 +80,6 @@ def process(
 
         # Identify individual grains from mask and generate statistics on them
         find_grains(perovstats_object.config, image_object)
-
-        # Find and mark indents in grains
-        find_indents(perovstats_object.config, image_object)
 
         logger.info(f"[{image_object.filename}] : *** Exporting data ***")
         # Save image and grain data to their own .csv file

@@ -13,11 +13,12 @@ from .core.classes import Grain, ImageData
 from .core.image_processing import normalise_array
 from .core.io import save_image, grain_area_histogram, grain_circularity_histogram
 from .smears import clean_smears
+from .pruning import find_indents
 
 
 def find_grains(
         config: dict[str, any],
-        image_object: ImageData,
+        image_object: ImageData
     ) -> None:
     """
     Method to find grains from a mask and list the stats about them.
@@ -53,18 +54,18 @@ def find_grains(
     labelled_mask, border_grains = tidy_border(labelled_mask, min_dist_from_edge)
     image_object.edge_grains = border_grains
 
-    max_size = 25
-    labelled_mask = remove_small_grains(labelled_mask, max_size)
+    min_size = 25
+    labelled_mask = remove_small_grains(labelled_mask, min_size)
 
     # Remove grains in/ touching smears
     if config["remove_smears"]["run"]:
         labelled_mask, removed_mask = clean_smears(labelled_mask, image_object.smears)
         image_object.smear_grains = removed_mask
 
-    labelled_mask_rgb = label2rgb(labelled_mask, bg_label=0, saturation=0)
-
     # Get the area, perimeter and individual grain images for each grain
     mask_regionprops = regionprops(labelled_mask)
+    labelled_mask_rgb = label2rgb(labelled_mask, bg_label=0, saturation=0)
+
     mask_areas = [
         regionprop.area * pixel_to_nm_scaling**2 for regionprop in mask_regionprops
     ]
@@ -132,17 +133,19 @@ def find_grains(
         # grain_volume = find_grain_volume(mask, mask_regionprops[i], labelled_mask, mask_images[i], pixel_to_nm_scaling)
         image_object.grains[i] = Grain(
             grain_id=i,
-            # centre_x
-            # centre_y
-            # is_intersected
             grain_image=grain_images[i],
             grain_mask=mask_images[i],
             grain_mask_outline=mask_outlines[i],
             grain_area=grain_area,
             grain_circularity_rating=grain_circularity,
-            # grain_volume=grain_volume,
             grain_bbox=mask_bboxs[i],
         )
+
+    # Find and apply splits
+    if config["segmentation"]["find_indents"]:
+        find_indents(config, image_object)
+    else:
+        image_object.indent_mask = image_object.mask
 
     logger.info(
         f"[{filename}] : Obtained {image_object.num_grains} grains",
@@ -151,11 +154,15 @@ def find_grains(
 
     # Remove mask outlines of edge grains and smear grains from the mask
     mask_rgb = mask_data["mask_rgb"]
+    mask_rgb[image_object.indent_mask > 0] = [0, 0, 0]
     image_object.mask_rgb = mask_rgb
     save_dir = Path(config_yaml["output_dir"]) / filename / "images"
     new_mask = image_object.mask.copy()
+
     new_mask[image_object.edge_grains] = 0
     new_mask[image_object.smear_grains] = 0
+    # Remove single pixels left in the smear area by accident
+    new_mask = morphology.remove_small_objects(new_mask, max_size=1, connectivity=2)
     image_object.cleaned_mask = new_mask
 
     # Save the cleaned mask
@@ -338,9 +345,3 @@ def get_grain_outline(mask: np.ndarray) -> np.ndarray:
     boundary = find_boundaries(padded_mask, mode='inner')
 
     return boundary[1:-1, 1:-1]
-
-
-def split_grain(image_object: ImageData, grain_object: Grain, split_mask: np.ndarray) -> None:
-    new_mask = grain_object.grain_mask_outline | split_mask
-
-    labelled_mask = label(new_mask, connectivity=1)

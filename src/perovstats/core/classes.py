@@ -49,7 +49,8 @@ class Grain:
             "grain_id": self.grain_id,
             "grain_area": self.grain_area,
             "grain_circularity": self.grain_circularity_rating,
-            "grain_volume": self.grain_volume
+            "grain_volume": self.grain_volume,
+            "indented": self.indented
         }
 
 
@@ -121,6 +122,7 @@ class ImageData:
     image_original: np.ndarray | None = None
     image_flattened: np.ndarray | None = None
     mask: np.ndarray | None = None
+    indent_mask: np.ndarray | None = None
     high_pass: np.ndarray | None = None
     low_pass: np.ndarray | None = None
     smears: np.ndarray | None = None
