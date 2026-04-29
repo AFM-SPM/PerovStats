@@ -14,6 +14,14 @@ body:
       required: true
 
   - type: textarea
+    id: logs
+    attributes:
+      label: Output of logs
+      description: Please paste the error message and message preceding it (if you are not sure how many messages to include please add all of them)
+    validations:
+      required: true
+
+  - type: textarea
     id: steps
     attributes:
       label: Steps to reproduce
@@ -38,3 +46,5 @@ body:
         - Linux
         - macOS
         - Windows
+    validations:
+      required: true
