@@ -19,6 +19,8 @@ This page assumes you have downloaded and set up PerovStats. If not, please foll
 
         The configuration file (`.yaml`) to be used in the program's run. For the demo notebook this can be left as is and default configuration options will be used.
 
+        (For help creating a custom config file refer to the [config documentation](config.md))
+
 - You can now start running the cells (one at a time or all at once). Images will appear through the notebook as cells run showing you the latest stage of the process. The segmentation cell may take a few minutes to complete, if no error message shows assume everything is running as expected.
 
 - Images of the scan, graphs, `.csv` files and a copy of the configuration options used will be saved to the output directory you chose earlier.
