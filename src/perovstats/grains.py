@@ -91,13 +91,13 @@ def find_grains(
         setattr(image_object, key, value)
 
     _create_grain_objects(
-        image_object = image_object,
-        areas = mask_details['areas'],
-        perimeters = mask_details['perimeters'],
-        images = mask_details['images'],
-        masks = mask_details['masks'],
-        outlines = mask_details['outlines'],
-        bboxes = mask_details['bboxes']
+        image_object=image_object,
+        areas=mask_details['areas'],
+        perimeters=mask_details['perimeters'],
+        images=mask_details['images'],
+        masks=mask_details['masks'],
+        outlines=mask_details['outlines'],
+        bboxes=mask_details['bboxes']
     )
 
     image_object.indent_mask = image_object.mask
