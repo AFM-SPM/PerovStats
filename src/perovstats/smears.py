@@ -8,6 +8,8 @@ from skimage.measure import regionprops
 from .core.classes import ImageData
 from .core.image_processing import get_horizontal_gradients
 
+HORIZONTAL_DILATION_KERNEL = np.ones((5,10))
+STANDARD_DILATION_KERNEL = np.ones((3,3))
 
 def find_smear_areas(
         config: dict[str, any],
@@ -24,11 +26,10 @@ def find_smear_areas(
 
     Parameters
     ----------
-    high_pass: np.ndarray
-        The high-passed version of the image for use in finding vertical gradients significantly
-        bigger than the corresponding horizontal gradient.
     config: dict[str, any]
-        Smear removal configuration options
+        Smear removal configuration options.
+    image_object: ImageData
+        Class instance of the image being processed.
     """
     config = config["remove_smears"]
     if config["run"]:
@@ -61,13 +62,13 @@ def find_smear_areas(
             if np.sum(labeled == i) < min_size:
                 mask[labeled == i] = 0
 
-        mask = binary_closing(mask, structure=np.ones((5, 10)))
+        mask = binary_closing(mask, structure=HORIZONTAL_DILATION_KERNEL)
 
         # Compare the mask calculated above with a mask selecting all pixels with a horizontal gradient over
         # a given threshold in the low-pass image, creating a new mask containing all overlapping pixels
         low_pass_gradient_mask = get_horizontal_gradients(low_pass, threshold=lowpass_threshold)
         final_mask = mask & low_pass_gradient_mask
-        final_mask = binary_dilation(final_mask, structure=np.ones((3, 3)))
+        final_mask = binary_dilation(final_mask, structure=STANDARD_DILATION_KERNEL)
 
         # Remove smears not meeting minimum area requirements
         labeled, n = label(final_mask)
@@ -112,8 +113,9 @@ def clean_smears(mask: np.ndarray, smear_mask: np.ndarray) -> np.ndarray:
 
     Returns
     -------
-    np.ndarray
-        The resultant grain mask with sections overlapping with the smear mask removed.
+    tuple(np.ndarray, np.ndarray)
+        The resultant grain mask with sections overlapping with the smear mask removed, and
+        a mask of the parts removed.
 
     """
     removed_mask = np.zeros_like(mask, dtype=bool)
