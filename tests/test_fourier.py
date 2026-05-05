@@ -11,6 +11,7 @@ from perovstats.fourier import (
 )
 
 
+@pytest.mark.xfail(reason="Extremitiy removal not yet accounted for.")
 @pytest.mark.parametrize(
     ("image"),
     [

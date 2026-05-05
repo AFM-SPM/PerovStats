@@ -80,7 +80,6 @@ def split_frequencies(
             cutoff=cutoff,
             edge_width=edge_width,
         )
-        # high_pass, low_pass = apply_brick_wall_highpass(image, cutoff_px=cutoff)
 
         high_pass = remove_extremes(high_pass)
 

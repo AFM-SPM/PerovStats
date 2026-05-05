@@ -65,6 +65,9 @@ def find_grains(
     if config["outliers"]["remove_outliers"]:
         labelled_mask, num_removed = remove_outliers(config, labelled_mask, pixel_to_nm_scaling)
         logger.info(f"[{filename}] : {num_removed} grains considered outliers due to size and removed from the data.")
+
+        labelled_mask, num_removed= remove_outliers_shape(config, labelled_mask, pixel_to_nm_scaling)
+        logger.info(f"[{filename}] : {num_removed} grains considered outliers due to shape and removed from the data.")
     else:
         logger.info(f"[{filename}] : Outlier removal is turned off in the config.")
 
@@ -364,6 +367,40 @@ def remove_outliers(config, labelled_mask, pixel_to_nm_scaling):
     ]
     areas_array = np.array(mask_areas)
     z_scores_abs = np.abs(stats.zscore(areas_array))
+    outliers = z_scores_abs > config["outliers"]["max_z_score"]
+
+    remove_regions = []
+    keep_labels = []
+    # for each grain in mask
+    for i, region in enumerate(mask_regionprops):
+        # if any pixels overlap with smear mask, remove them
+        if outliers[i]:
+            remove_regions.append(region)
+            num_removed += 1
+        else:
+            keep_labels.append(region.label)
+
+    for region in remove_regions:
+        grain_pixels = (labelled_mask == region.label)
+
+        # Add the border sections safe to delete to the removed_mask and remove the grain
+        labelled_mask[grain_pixels] = 0
+
+    return labelled_mask, num_removed
+
+
+def remove_outliers_shape(config, labelled_mask, pixel_to_nm_scaling):
+    num_removed = 0
+    mask_regionprops = regionprops(labelled_mask)
+    mask_areas = [
+        regionprop.area * pixel_to_nm_scaling**2 for regionprop in mask_regionprops
+    ]
+    mask_perimeters = [
+        regionprop.perimeter_crofton * pixel_to_nm_scaling for regionprop in mask_regionprops
+    ]
+    grain_circularities = [find_circularity_rating(mask_areas[i], mask_perimeters[i]) for i in range(len(mask_areas))]
+    circularities_array = np.array(grain_circularities)
+    z_scores_abs = np.abs(stats.zscore(circularities_array))
     outliers = z_scores_abs > config["outliers"]["max_z_score"]
 
     remove_regions = []

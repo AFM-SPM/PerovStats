@@ -22,7 +22,6 @@ def test_create_grain_mask(dummy_original_image: np.ndarray) -> None:
         dummy_original_image,
         threshold_block_size=55,
         threshold_offset=0,
-        smooth_sigma=8,
         area_threshold=10000,
         disk_radius=40,
         height_bias=100

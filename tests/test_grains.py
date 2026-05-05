@@ -88,7 +88,7 @@ def test_find_circularity_rating(grain_mask, expected_rating):
 
 def test_tidy_borders(dummy_mask: np.ndarray):
     mask = dummy_mask
-    new_mask = tidy_border(mask)
+    new_mask, _ = tidy_border(mask, min_dist=1)
 
     assert new_mask.shape == mask.shape
     assert new_mask.dtype == mask.dtype
