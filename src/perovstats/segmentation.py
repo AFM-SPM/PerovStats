@@ -12,6 +12,11 @@ from .core.classes import ImageData
 from .core.utils import Skeletonisation
 from .pruning import prune_mask, find_splits
 
+CELLPOSE_FLOW_THRESHOLD = 0.9
+CELLPOSE_PROB_THRESHOLD = -1
+CELLPOSE_MIN_SIZE = 5
+
+MORPHOLOGY_DISK_RADIUS = 3
 
 def segment_image(config: dict[str, any], image_object: ImageData) -> None:
     """
@@ -51,7 +56,7 @@ def segment_image_cellpose(config: dict[str, any], image_object: ImageData) -> N
     config : dict[str, any]
         A dictionary of config options inputted at the start of the program.
     image_object : ImageData
-        Dataclass reference contianing data and stats on the image currently
+        Dataclass reference containing data and stats on the image currently
         being processed.
     """
     logger.info(f"[{image_object.filename}] : *** Mask creation ***")
@@ -74,10 +79,10 @@ def segment_image_cellpose(config: dict[str, any], image_object: ImageData) -> N
     masks, flows, styles = model.eval(
         image_object.high_pass,
         diameter=None,
-        flow_threshold=0.9,
-        cellprob_threshold=-1,
+        flow_threshold=CELLPOSE_FLOW_THRESHOLD,
+        cellprob_threshold=CELLPOSE_PROB_THRESHOLD,
         resample=True,
-        min_size=5,
+        min_size=CELLPOSE_MIN_SIZE,
     )
 
     logger.success(f"[{image_object.filename}] : Mask created, Returning image to original size.")
@@ -89,8 +94,7 @@ def segment_image_cellpose(config: dict[str, any], image_object: ImageData) -> N
 
     outlines = cellposeutils.masks_to_outlines(masks)
 
-    footprint = ski.morphology.disk(3)
-    np_mask = ski.morphology.closing(outlines, footprint=footprint)
+    np_mask = ski.morphology.closing(outlines, footprint=ski.morphology.disk(MORPHOLOGY_DISK_RADIUS))
     np_mask = Skeletonisation(image_object.high_pass, np_mask, height_bias=height_bias).do_skeletonisation()
 
     image_object.mask = np_mask
@@ -177,10 +181,9 @@ def clean_mask(
     numpy.ndarray
         Cleaned up mask array.
     """
-    mask = ski.morphology.remove_small_holes(
-        ski.morphology.remove_small_objects(mask.astype(bool), max_size=area_threshold),
-        max_size=min_hole_size
-    )
+    mask = mask.astype(bool)
+    mask = ski.morphology.remove_small_holes(mask, max_size=area_threshold)
+    mask = ski.morphology.remove_small_holes(mask, max_size=min_hole_size)
     return ski.morphology.opening(mask, ski.morphology.disk(disk_radius))
 
 

@@ -84,7 +84,7 @@ def grain_area_histogram(data: list[float], filename: str, output_dir: Path):
         plt.close(fig)
 
 
-def grain_circularity_histogram(data: list[float], filename: str, output_dir: Path):
+def grain_circularity_histogram(data: list[float], filename: str, output_dir):
     """
     Method for saving a histogram plotting the circularity rating of grains found.
 

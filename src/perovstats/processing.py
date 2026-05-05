@@ -13,6 +13,7 @@ from .grains import find_grains
 from .fourier import split_frequencies
 from .smears import find_smear_areas
 
+LOG_SEPARATOR = "=" * 99 + "\n"
 
 def run_process(
         img_files: list[Path],
@@ -130,15 +131,15 @@ def completion_message(perovstats_object: PerovStats, time_taken: str, time_per_
 
     segment_method = perovstats_object.config['segmentation']['segmentation_method']
     if segment_method == "traditional":
-        segment_method = "Traditional (fast)"
+        segment_method = "Traditional"
     elif segment_method == "cellpose":
-        segment_method = "Cellpose ML (accurate)"
+        segment_method = "Cellpose ML"
 
     logger.success("Process completed successfully.")
-    print("----------------------------------------------------------------------------------------------------\n")
+    print(LOG_SEPARATOR)
     tprint("PerovStats", font="epic")
     print(
-        f'----------------------------------------------------------------------------------------------------\n'
+        LOG_SEPARATOR +
         f'Segmentation Method                   : {segment_method}\n'
         f'Base Directory                        : "{full_base_dir}"\n'
         f'Output Directory                      : "{full_output_dir}"\n'
@@ -146,7 +147,7 @@ def completion_message(perovstats_object: PerovStats, time_taken: str, time_per_
         f'Files Found                           : {len(perovstats_object.images)}\n'
         f'Successfully Processed                : {successful_no} ({success_perc}%)\n'
         f'Time Taken                            : {time_taken} (~{time_per_image}/image)\n'
-        f'----------------------------------------------------------------------------------------------------'
+        + LOG_SEPARATOR
     )
 
 

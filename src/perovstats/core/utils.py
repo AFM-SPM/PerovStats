@@ -55,7 +55,7 @@ class Skeletonisation:
         self.skeletonise_with_bias(priority_map)
 
         # Remove padding added in __init__() to handle edge pixels
-        self.iamge = self.image[1:-1, 1:-1]
+        self.image = self.image[1:-1, 1:-1]
         self.mask = self.mask[1:-1, 1:-1]
 
         # Final skeletonisation before returning avoids diagonal lines being too thick

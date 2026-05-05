@@ -25,7 +25,7 @@ class Grain:
     grain_volume: float | None
         Volume of the grain in nm^3
     indent_mask: np.ndarray | None
-        Boolean mask containing indent linkes detected within the grain.
+        Boolean mask containing indent lines detected within the grain.
     grain_bbox: tuple[int]
         The bounding box coords of the grain relative to the image's mask.
     """
@@ -119,10 +119,10 @@ class ImageData:
         Image scaling of pixels to nm.
     threshold : float
         The threshold used for segmentation.
-    mask_areas:
+    mask_areas : list[float]
         A list of floats containing the areas for each grain.
-    circularity_data:
-        A lsit of floats containing the circularity rating for each grain (0-1).
+    circularity_data : list[float]
+        A list of floats containing the circularity rating for each grain (0-1).
     """
     success: bool | None = None
     image_original: np.ndarray | None = None
@@ -152,8 +152,8 @@ class ImageData:
     mode_grain_area: float | None = None
     pixel_to_nm_scaling: float | None = None
     threshold: float | None = None
-    mask_areas: list | None = None
-    circularity_data: list | None = None
+    mask_areas: list[float] | None = None
+    circularity_data: list[float] | None = None
 
     def to_dict(self) -> dict:
         """
