@@ -298,7 +298,7 @@ def remove_small_grains(mask, max_size):
 
 
 @staticmethod
-def tidy_border(mask: np.ndarray[np.bool_], min_dist) -> np.ndarray[np.bool_]:
+def tidy_border(mask: np.ndarray[np.bool_], min_dist: float) -> np.ndarray[np.bool_]:
     """
     Remove whole grains touching the border. Also save data on the mask lines that contain a grain
     touching the edge of the image, to be removed later.
@@ -307,6 +307,8 @@ def tidy_border(mask: np.ndarray[np.bool_], min_dist) -> np.ndarray[np.bool_]:
     ----------
     mask : npt.NDArray
         3-D Numpy array of the grain mask tensor.
+    min_dist: float
+        Minimum distance from border a grain can be to not be removed.
 
     Returns
     -------
@@ -353,13 +355,47 @@ def tidy_border(mask: np.ndarray[np.bool_], min_dist) -> np.ndarray[np.bool_]:
 
 
 def get_grain_outline(mask: np.ndarray) -> np.ndarray:
+    """
+    Get a mask of a single-pixel outline of a given grain.
+    The grain is extended by 1px in each direction and then boundaries are found from this.
+
+    Parameters
+    ----------
+    mask : np.ndarray
+        A filled mask of the grain.
+
+    Returns
+    -------
+    np.ndarray
+        The input mask with the centre unfilled, leaving just a 1px wide outline.
+    """
     padded_mask = np.pad(mask, pad_width=1, mode='constant', constant_values=False)
     boundary = find_boundaries(padded_mask, mode='inner')
 
     return boundary[1:-1, 1:-1]
 
 
-def remove_outliers(config, labelled_mask, pixel_to_nm_scaling):
+def remove_outliers(config: dict, labelled_mask: np.ndarray, pixel_to_nm_scaling: float):
+    """
+    Find outliers in the data based on grain size. If a grain has a size above or below
+    n standard deviations from the mean (n defined in config) then remove it from the data.
+
+    Parameters
+    ----------
+    config : dict
+        The configuration options of the program's run.
+    labelled_mask : np.ndarray
+        The grain mask with specific grains labelled to be looped through.
+    pixel_to_nm_scaling : float
+        Pixels per nm in image.
+
+    Returns
+    -------
+    np.ndarray
+        The input labelled_mask with outlier grains removed.
+    int
+        The number of individual grains removed by the method.
+    """
     num_removed = 0
     mask_regionprops = regionprops(labelled_mask)
     mask_areas = [
@@ -390,6 +426,27 @@ def remove_outliers(config, labelled_mask, pixel_to_nm_scaling):
 
 
 def remove_outliers_shape(config, labelled_mask, pixel_to_nm_scaling):
+    """
+    Find outliers in the data based on grain circularity. If a grain has a circularity
+    rating above or below n standard deviations from the mean (n defined in config) then
+    remove it from the data.
+
+    Parameters
+    ----------
+    config : dict
+        The configuration options of the program's run.
+    labelled_mask : np.ndarray
+        The grain mask with specific grains labelled to be looped through.
+    pixel_to_nm_scaling : float
+        Pixels per nm in image.
+
+    Returns
+    -------
+    np.ndarray
+        The input labelled_mask with outlier grains removed.
+    int
+        The number of individual grains removed by the method.
+    """
     num_removed = 0
     mask_regionprops = regionprops(labelled_mask)
     mask_areas = [

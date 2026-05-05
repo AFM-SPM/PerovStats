@@ -377,7 +377,6 @@ def find_splits(config, image_object):
 
 
 def find_indents(config: dict[str, any], image_object: ImageData):
-    import matplotlib.pyplot as plt
     indentation_threshold = config["indentation"]["threshold"]
     image_object.indent_mask = copy.deepcopy(image_object.mask)
     for grain_object in image_object.grains.values():

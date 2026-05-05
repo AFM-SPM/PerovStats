@@ -27,12 +27,8 @@ def find_smear_areas(
     high_pass: np.ndarray
         The high-passed version of the image for use in finding vertical gradients significantly
         bigger than the corresponding horizontal gradient.
-    low_pass: np.ndarray
-        The low-passed version of the image for use in finding high horizontal gradients.
     config: dict[str, any]
         Smear removal configuration options
-    filename: str
-        Filename currently being processed, used for logging info.
     """
     config = config["remove_smears"]
     if config["run"]:

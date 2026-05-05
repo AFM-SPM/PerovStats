@@ -12,6 +12,8 @@ class Grain:
     ----------
     grain_id : int
         Unique identifier for the grain.
+    indented: bool
+        Whether the grain has a detected indent or not.
     grain_image : np.ndarray | None
         A mask of the grain taken from the high-passed image.
     grain_mask : np.ndarray | None
@@ -22,6 +24,10 @@ class Grain:
         A rating of 0-1 giving how close the shape of the grain is to a circle.
     grain_volume: float | None
         Volume of the grain in nm^3
+    indent_mask: np.ndarray | None
+        Boolean mask containing indent linkes detected within the grain.
+    grain_bbox: tuple[int]
+        The bounding box coords of the grain relative to the image's mask.
     """
     grain_id: int
     indented: bool = False
@@ -115,7 +121,7 @@ class ImageData:
         The threshold used for segmentation.
     mask_areas:
         A list of floats containing the areas for each grain.
-    circularity_rating:
+    circularity_data:
         A lsit of floats containing the circularity rating for each grain (0-1).
     """
     success: bool | None = None
