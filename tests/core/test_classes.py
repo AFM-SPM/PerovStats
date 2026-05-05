@@ -12,6 +12,7 @@ from perovstats.core.classes import Grain, ImageData
                 "grain_area": 10.2,
                 "grain_circularity": 0.6,
                 "grain_volume": None,
+                "indented": False,
             }
         ),
     ]
@@ -30,8 +31,6 @@ def test_grain_to_dict(
     [
         pytest.param(
             {
-                'cutoff': 0.9,
-                'cutoff_freq_nm': 1.32,
                 'file_dir': 'tmp_path',
                 'filename': 'dummy_filename',
                 'grains_per_nm2': 2,
@@ -43,7 +42,6 @@ def test_grain_to_dict(
                 'mode_grain_area_nm2': None,
                 'num_grains': 1,
                 'pixel_to_nm_scaling': 1,
-                'threshold': -0.8,
                 'smears_removed': True,
                 'smear_percent': 10.0,
             }
