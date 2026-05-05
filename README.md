@@ -1,7 +1,16 @@
 # PerovStats
 An program to process AFM scans of perovskite and generate usable data and statistics.
 
+Basic instructions are provided in this page. For detailed intructions and explanations of PerovStats please read and/or follow the documentation:
+- [Installation guide](docs/installation.md)
+- [Configuration guide](docs/config.md)
+- [Usage guide](docs/usage.md)
+- [Issue reporting guide](docs/issues.md)
+- [Updating guide](docs/updating.md)
+
 ## Installation
+
+Full instructions for installing PerovStats can be found in the [installation guide](docs/installation.md). It is recommended to follow these to ensure correct versioning.
 
 To install PerovStats directly from GitHub via ssh:
 
@@ -17,50 +26,25 @@ cd PerovStats
 pip install -r requirements.txt
 ```
 
-## Documentation
+## Basic usage
 
-### Basic usage
-
-Run the command `perovstats` in the terminal.
+Run the command `perovstats process` in the terminal. Alternatively, the notebooks can be run for a demo or batch processing.
 - Uses `src/perovstats/default_config.yaml` for configuration options, below details custom arguments avaliable.
 
----
-
-### Command-line interface
-
-```console
-usage: perovstats [-h] [-c CONFIG_FILE] [-d BASE_DIR] [-e FILE_EXT] [-n CHANNEL] [-o OUTPUT_DIR] [-w EDGE_WIDTH]
-
-Command-line interface for PerovStats workflow.
-
-options:
-  -h, --help            show this help message and exit
-  -c CONFIG_FILE, --config_file CONFIG_FILE
-                        Path to configuration file
-  -d BASE_DIR, --base_dir BASE_DIR
-                        Directory in which to search for data files
-  -e FILE_EXT, --file_ext FILE_EXT
-                        File extension of the data files
-  -n CHANNEL, --channel CHANNEL
-                        Name of data channel to use
-  -o OUTPUT_DIR, --output_dir OUTPUT_DIR
-                        Directory to which to output results
-  -w EDGE_WIDTH, --edge_width EDGE_WIDTH
-                        Edge width as proportion of Nyquist frequency
+Terminal command:
+```
+perovstats process
 ```
 
----
+## Notebooks
 
-### Accepted file types
+Two Jupyter Notebooks have been developed for use by users. One is a demonstration notebook which takes a single AFM scan file and explains/ visualises each step as it progresses through the process, and the other is for general use; this notebook takes a folder of multiple scans rather than just one.
 
-Currently PerovStats only handles `.spm` files generated from an AFM scan.
 
----
-
-### Features
+## Features
 
 - Image frequency splitting to isolate perovskite topology (optional)
-- Automatic segmentation and grain finding of an image
+- Automatic segmentation and grain finding of an image (using either traditional segmentation method or machine learning)
 - Statistics and `.csv` generation about processed image, including:
   - Image-wide statistics
     - Number of grains found

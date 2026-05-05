@@ -8,7 +8,7 @@ A custom config file only needs to contain the parameters you want to change, an
 
 Please ensure to indent your parameters correctly, including the names of each section
 
-For example, do this:
+For example, write this:
 ```
 segmentation:
     segmentation_method: traditional
@@ -21,11 +21,11 @@ segmentation_method: traditional
 
 ### To create and use the config file:
 
-- Open a text editor (just notepad will do if you don't have an IDE) and save the file in an accessible location called something like `config.yaml`.
+- Open a text editor (just notepad will do if you don't have another program) and save the file in an accessible location called something like `config.yaml`.
 - **Notebooks**:
     - Near the top of whichever notebook you are using is an option to define the config's filepath. Change the path in the double quotes to the path of this file you've just created.
 - **Command line**:
-    - When running PerovStats with `perovstats process` include `-c "path/to/config.yaml"` inbetween `perovstats` and `process` like so:
+    - When running PerovStats with `perovstats process` include `-config_file "path/to/config.yaml"` *inbetween* `perovstats` and `process` like so:
 
     ```
     perovstats -config_file "C:/Users/user1/Desktop/config.yaml" process

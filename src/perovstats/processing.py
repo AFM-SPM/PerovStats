@@ -14,7 +14,7 @@ from .fourier import split_frequencies
 from .smears import find_smear_areas
 
 
-def process(
+def run_process(
         img_files,
         config,
         output_dir
@@ -121,10 +121,14 @@ def completion_message(perovstats_object: PerovStats, time_taken: str, time_per_
         The formatted average time taken per image during the process. This is required as a parameter
         as it must be calculated before the total time is formatted.
     """
+
+    full_base_dir = Path(perovstats_object.config["base_dir"]).resolve()
+    full_output_dir = Path(perovstats_object.config["output_dir"]).resolve()
+
     successful_no = sum(image.success for image in perovstats_object.images)
     success_perc = round((successful_no / len(perovstats_object.images)) * 100, 2)
 
-    segment_method = perovstats_object.config['segmentation']['segmentation_type']
+    segment_method = perovstats_object.config['segmentation']['segmentation_method']
     if segment_method == "traditional":
         segment_method = "Traditional (fast)"
     elif segment_method == "cellpose":
@@ -134,15 +138,15 @@ def completion_message(perovstats_object: PerovStats, time_taken: str, time_per_
     print("----------------------------------------------------------------------------------------------------\n")
     tprint("PerovStats", font="epic")
     print(
-        f"----------------------------------------------------------------------------------------------------\n"
-        f"Segmentation Method                   : {segment_method}\n"
-        f"Base Directory                        : {perovstats_object.config['base_dir']}\n"
-        f"Output Directory                      : {perovstats_object.config['output_dir']}\n"
-        f"File Extension                        : {perovstats_object.config['file_ext']}\n"
-        f"Files Found                           : {len(perovstats_object.images)}\n"
-        f"Successfully Processed                : {successful_no} ({success_perc}%)\n"
-        f"Time Taken                            : {time_taken} (~{time_per_image}/image)\n"
-        f"----------------------------------------------------------------------------------------------------"
+        f'----------------------------------------------------------------------------------------------------\n'
+        f'Segmentation Method                   : {segment_method}\n'
+        f'Base Directory                        : "{full_base_dir}"\n'
+        f'Output Directory                      : "{full_output_dir}"\n'
+        f'File Extension                        : {perovstats_object.config["file_ext"]}\n'
+        f'Files Found                           : {len(perovstats_object.images)}\n'
+        f'Successfully Processed                : {successful_no} ({success_perc}%)\n'
+        f'Time Taken                            : {time_taken} (~{time_per_image}/image)\n'
+        f'----------------------------------------------------------------------------------------------------'
     )
 
 

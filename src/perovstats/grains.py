@@ -8,12 +8,13 @@ from skimage.measure import label, regionprops
 from skimage.segmentation import find_boundaries
 from skimage import morphology
 from scipy.ndimage import binary_fill_holes
+from scipy import stats
 
 from .core.classes import Grain, ImageData
 from .core.image_processing import normalise_array
 from .core.io import save_image, grain_area_histogram, grain_circularity_histogram
 from .smears import clean_smears
-from .pruning import find_indents
+# from .pruning import find_indents
 
 
 def find_grains(
@@ -40,7 +41,6 @@ def find_grains(
     logger.info(f"[{image_object.filename}] : *** Grain finding ***")
 
     all_masks_grain_areas = []
-    data = []
     filename = image_object.filename
     config_yaml = config
     pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
@@ -61,6 +61,12 @@ def find_grains(
     if config["remove_smears"]["run"]:
         labelled_mask, removed_mask = clean_smears(labelled_mask, image_object.smears)
         image_object.smear_grains = removed_mask
+
+    if config["outliers"]["remove_outliers"]:
+        labelled_mask, num_removed = remove_outliers(config, labelled_mask, pixel_to_nm_scaling)
+        logger.info(f"[{filename}] : {num_removed} grains considered outliers due to size and removed from the data.")
+    else:
+        logger.info(f"[{filename}] : Outlier removal is turned off in the config.")
 
     # Get the area, perimeter and individual grain images for each grain
     mask_regionprops = regionprops(labelled_mask)
@@ -119,7 +125,7 @@ def find_grains(
         "mode_grain_area": mode_grain_area
     }
 
-    data.append(mask_data)
+    # data.append(mask_data)
 
 
     # Assign area data for individual grains to appropriate classes
@@ -127,8 +133,8 @@ def find_grains(
         setattr(image_object, key, value)
     image_object.grains = {}
     circularity_data = []
-    for i, grain_area in enumerate(mask_areas):
-        grain_circularity = find_circularity_rating(grain_area, mask_perimeters[i])
+    for i, _ in enumerate(mask_areas):
+        grain_circularity = find_circularity_rating(mask_areas[i], mask_perimeters[i])
         circularity_data.append(grain_circularity)
         # grain_volume = find_grain_volume(mask, mask_regionprops[i], labelled_mask, mask_images[i], pixel_to_nm_scaling)
         image_object.grains[i] = Grain(
@@ -136,16 +142,19 @@ def find_grains(
             grain_image=grain_images[i],
             grain_mask=mask_images[i],
             grain_mask_outline=mask_outlines[i],
-            grain_area=grain_area,
+            grain_area=mask_areas[i],
             grain_circularity_rating=grain_circularity,
             grain_bbox=mask_bboxs[i],
         )
 
+
     # Find and apply splits
-    if config["segmentation"]["find_indents"]:
-        find_indents(config, image_object)
-    else:
-        image_object.indent_mask = image_object.mask
+    # if config["segmentation"]["find_indents"]:
+    #     find_indents(config, image_object)
+    # else:
+    #     image_object.indent_mask = image_object.mask
+
+    image_object.indent_mask = image_object.mask
 
     logger.info(
         f"[{filename}] : Obtained {image_object.num_grains} grains",
@@ -345,3 +354,33 @@ def get_grain_outline(mask: np.ndarray) -> np.ndarray:
     boundary = find_boundaries(padded_mask, mode='inner')
 
     return boundary[1:-1, 1:-1]
+
+
+def remove_outliers(config, labelled_mask, pixel_to_nm_scaling):
+    num_removed = 0
+    mask_regionprops = regionprops(labelled_mask)
+    mask_areas = [
+        regionprop.area * pixel_to_nm_scaling**2 for regionprop in mask_regionprops
+    ]
+    areas_array = np.array(mask_areas)
+    z_scores_abs = np.abs(stats.zscore(areas_array))
+    outliers = z_scores_abs > config["outliers"]["max_z_score"]
+
+    remove_regions = []
+    keep_labels = []
+    # for each grain in mask
+    for i, region in enumerate(mask_regionprops):
+        # if any pixels overlap with smear mask, remove them
+        if outliers[i]:
+            remove_regions.append(region)
+            num_removed += 1
+        else:
+            keep_labels.append(region.label)
+
+    for region in remove_regions:
+        grain_pixels = (labelled_mask == region.label)
+
+        # Add the border sections safe to delete to the removed_mask and remove the grain
+        labelled_mask[grain_pixels] = 0
+
+    return labelled_mask, num_removed

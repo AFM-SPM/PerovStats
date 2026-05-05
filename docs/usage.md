@@ -2,9 +2,15 @@
 
 This page assumes you have downloaded and set up PerovStats. If not, please follow the instructions found in [installation.md](installation.md).
 
+## First time running
+
+### Model downloads
+
+The first time PerovStats is running using 'cellpose' segmentation the model will have to be downloaded. A progress bar will appear in the output and it may take a few minutes to complete. This model can then be reused so you should not have to wait for it to download again.
+
 ## Running from the notebook
 
-### perovstats-demo.ipynb
+### [perovstats-demo.ipynb](../notebooks/perovstats-demo.ipynb)
 
 #### This is the demo notebook for an explanation on running PerovStats and the processes it goes through. Use this notebook first to see how files will be processed. As this is for example purposes, only one file can be inputted per run.
 
@@ -25,7 +31,7 @@ This page assumes you have downloaded and set up PerovStats. If not, please foll
 
 - Images of the scan, graphs, `.csv` files and a copy of the configuration options used will be saved to the output directory you chose earlier.
 
-### perovstats-process.ipynb
+### [perovstats-multi-process.ipynb](../notebooks/perovstats-multi-process.ipynb)
 
 #### This is the main notebook to use when running PerovStats, and allows multiple files to be processed in one run
 
@@ -51,12 +57,66 @@ This page assumes you have downloaded and set up PerovStats. If not, please foll
 
 ### Running the program with custom settings
 
-- If you would like custom config settings:
+#### Command line arguments
 
-    - Copy the contents of `default_config.yaml` into a new file in a destination of your choosing, and name it something like `config.yaml`.
+- Other than inputting a custom config file (see [config documentation](config.md)) common arguments can be passed from the terminal when running PerovStats.
 
-    - The settings and options within this file can now be changed to suit your needs.
+- The arguments available are:
 
-    - When starting the program, add `--config "config.yaml"` (or whatever you named the config file) to the end of the command, for example:
+    - `--help` or `-h`
+        - Display a menu showing each command detailed here.
+            ```
+            perovstats --help
+            ```
 
-        `perovstats --config "config.yaml"`
+    - `--config_file` or `-c`
+        - Give a custom config file which will override the default settings (again, see [configuration documentation](config.md) for details).
+
+            ```
+            perovstats -c "C:/path/to/config.yaml" process
+            ```
+
+    - `--base_dir` or `-d`
+        - Select the folder on your computer you would like to look for data files in.
+
+            **Note:** This requires a *folder* rather than a data file
+
+            ```
+            perovstats -d "C:/path/to/data_files/" process
+            ```
+
+    - `--file_ext` or `-e`
+        - Select the file extension of the scans you have (e.g. ".spm" or ".001")
+
+            ```
+            perovstats -e ".spm" process
+            ```
+
+    - `--channel` or `-n`
+        - Select the channel to use from the AFM scan (e.g. "Height")
+
+            ```
+            perovstats -n "Height" process
+            ```
+
+    - `--output_dir` or `-o`
+        - Directory to output resultant images + data to
+
+            **Note:** An `/output/` folder will be created inside this directory and files will be saved inside this
+
+            ```
+            perovstats -o "C:/path/to/output/folder/" process
+            ```
+
+    - `--segmentation` or `-s`
+        - Choose the segmentation method for finding grains in an image. Options are 'traditional' or 'cellpose' (see the [segmentation documentation](segmentation.md) for details on each of these).
+
+            ```
+            perovstats -s "traditional" process
+            ```
+
+- You can include multiple arguments in one command by adding a space between them:
+
+    ```
+    perovstats -s cellpose -e ".spm" process
+    ```
