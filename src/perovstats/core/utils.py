@@ -58,6 +58,7 @@ class Skeletonisation:
         self.iamge = self.image[1:-1, 1:-1]
         self.mask = self.mask[1:-1, 1:-1]
 
+        # Final skeletonisation before returning avoids diagonal lines being too thick
         return ski.morphology.skeletonize(self.mask)
 
 
@@ -97,7 +98,7 @@ class Skeletonisation:
         queue = []
         queue_map = np.zeros_like(self.mask, dtype=bool) # Boolean map of if the pixel is in queue
 
-        # Find all potential pixels to delete
+        # Find all potential pixels to delete, the very edge of the image can be ignore as this is padding
         for row in range(1, height-1):
             for col in range(1, width-1):
                 if self.mask[row, col] == 1:
@@ -109,7 +110,7 @@ class Skeletonisation:
         while queue:
             _, row, col = heapq.heappop(queue)
             queue_map[row, col] = False
-            # Skip if it's been removed from the mask
+            # Skip if it's been removed from the mask in a previous iteration
             if self.mask[row, col] == 0:
                 continue
 
@@ -128,8 +129,8 @@ class Skeletonisation:
     def _is_safe_to_delete(self, row, col) -> bool:
         """
         Checks if a pixel can be safely deleted. This is determined by checking
-        neighoburing pixels and confirming the pixel is not at the end (only 1 neighbour)
-        or that it isn't.
+        neighoburing pixels and confirming the pixel is not at the end (only 1 neighbour) or
+        that it isn't in the centre of a blob (therefore not an edge pixel).
 
         Returns
         -------
