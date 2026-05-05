@@ -89,12 +89,10 @@ def split_frequencies(
 
         # Convert high-pass and low-pass to image format
         arr = high_pass
-        # arr = normalise_array(arr)
         img_dir = Path(file_output_dir) / "images"
         save_image(arr, img_dir, f"{filename}_highpass.png", cmap="grey")
 
         arr = low_pass
-        # arr = normalise_array(arr)
         save_image(arr, img_dir, f"{filename}_lowpass.png", cmap="grey")
     else:
         logger.info(f"[{image_object.filename}] : Frequency splitting is disabled by config, the original image will be used.")
