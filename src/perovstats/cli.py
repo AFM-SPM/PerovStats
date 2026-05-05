@@ -39,11 +39,6 @@ def create_parser() -> ArgumentParser:
     """
     Set up argument parser.
 
-    Parameters
-    ----------
-    args : list[str]
-        Command line arguments.
-
     Returns
     -------
     Namespace
@@ -150,8 +145,7 @@ def setup_logger() -> None:
                colorize=True)
 
 
-
-def entry_point(manually_provided_args=None, testing=False) -> None:
+def entry_point(manually_provided_args=None, testing: bool=False) -> None:
     """
     Entry point for all PerovStats programs.
 
@@ -191,7 +185,7 @@ def entry_point(manually_provided_args=None, testing=False) -> None:
     return None
 
 
-def deep_merge(base, custom):
+def deep_merge(base: dict, custom: any):
     """
     Method for inserting custom config values into the full default config.
     """

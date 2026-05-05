@@ -17,6 +17,14 @@ def segment_image(config: dict[str, any], image_object: ImageData) -> None:
     """
     Start the grain segmentation process by running the method selected in
     config.
+
+    Parameters
+    ----------
+    config: dict[str, any]
+        The configuration parameters for the program's run.
+    image_object: ImageData
+        An ImageData class instance containing information on the image
+        currently being processed.
     """
     segmentation_method = config["segmentation"]["segmentation_method"]
     if segmentation_method == "traditional":

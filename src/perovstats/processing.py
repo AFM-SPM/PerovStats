@@ -15,9 +15,9 @@ from .smears import find_smear_areas
 
 
 def run_process(
-        img_files,
-        config,
-        output_dir
+        img_files: list[Path],
+        config: dict[str, any],
+        output_dir: Path,
     ) -> None:
     """
     Main method for running processes in PerovStats, calls functions

@@ -198,8 +198,6 @@ def find_cutoff(
         Starting cutoff when looping through to find the ideal value.
     max_cutoff : float
         Finishing cutoff when looping through to find the ideal value.
-    cutoff_step : float
-        Amount to increase tested cutoff by on each test.
     min_rms : float
         RMS threshold for when checking cutoffs.
     pixel_to_nm_scaling : float
@@ -316,7 +314,20 @@ def create_frequency_mask(image: np.ndarray) -> np.ndarray:
     return np.sqrt(xx**2 + yy**2)
 
 
-def remove_extremes(high_pass):
+def remove_extremes(high_pass: np.ndarray):
+    """
+    Clip an array to remove the highest and lowest extremes.
+
+    Parameters
+    ----------
+    high_pass : np.ndarray
+        The high-passed image to clip.
+
+    Returns
+    -------
+    np.ndarray
+        The clipped high-passed image.
+    """
     p_low, p_high = np.percentile(high_pass, [1, 99])
     clipped = np.clip(high_pass, p_low, p_high)
     return clipped

@@ -58,7 +58,7 @@ def save_config(config: dict, output_filename: str) -> None:
         safe_dump(config, outfile, default_flow_style=False)
 
 
-def grain_area_histogram(data, filename, output_dir):
+def grain_area_histogram(data: list[float], filename: str, output_dir: Path):
     """
     Method for saving a histogram plotting the areas of grains found.
 
@@ -84,7 +84,7 @@ def grain_area_histogram(data, filename, output_dir):
         plt.close(fig)
 
 
-def grain_circularity_histogram(data, filename, output_dir):
+def grain_circularity_histogram(data: list[float], filename: str, output_dir: Path):
     """
     Method for saving a histogram plotting the circularity rating of grains found.
 
