@@ -18,7 +18,7 @@ def segment_image(config: dict[str, any], image_object: ImageData) -> None:
     Start the grain segmentation process by running the method selected in
     config.
     """
-    segmentation_method = config["segmentation"]["segmentation_type"]
+    segmentation_method = config["segmentation"]["segmentation_method"]
     if segmentation_method == "traditional":
         segment_image_traditional(config, image_object)
     elif segmentation_method == "cellpose":
@@ -29,8 +29,8 @@ def segment_image(config: dict[str, any], image_object: ImageData) -> None:
     # separately later so these are pruned for now.
     prune_mask(config, image_object)
 
-    if config["segmentation"]["find_indents"]:
-        find_splits(config, image_object)
+    # if config["segmentation"]["find_indents"]:
+    find_splits(config, image_object)
 
 
 def segment_image_cellpose(config: dict[str, any], image_object: ImageData) -> None:
@@ -65,11 +65,11 @@ def segment_image_cellpose(config: dict[str, any], image_object: ImageData) -> N
     # cellprob_threshold: Threshold to mark area as grain based on the probability it is one.
     masks, flows, styles = model.eval(
         image_object.high_pass,
-        diameter=50,
+        diameter=None,
         flow_threshold=0.9,
         cellprob_threshold=-1,
         resample=True,
-        min_size=15,
+        min_size=5,
     )
 
     logger.success(f"[{image_object.filename}] : Mask created, Returning image to original size.")

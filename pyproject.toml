@@ -3,7 +3,7 @@ name = "perovstats"
 version = "0.1.0"
 
 [project.scripts]
-perovstats = "perovstats.cli:main"
+perovstats = "perovstats.cli:entry_point"
 
 [tool.black]
 line-length = 88

@@ -63,7 +63,7 @@ def split_frequencies(
         )
 
         if not cutoff:
-            logger.error(f"[{filename}] : Cutoff frequency could not be determined. Skipping image..")
+            logger.error(f"[{filename}] : Cutoff frequency could not be determined, try adjusting the cutoff_bounds parameter. Skipping image..")
             image_object.success = False
             return
 
@@ -320,7 +320,6 @@ def create_frequency_mask(image: np.ndarray) -> np.ndarray:
 
 
 def remove_extremes(high_pass):
-    mean = np.mean(high_pass)
-    std = np.std(high_pass)
-    high_pass_clamped = np.clip(high_pass, mean - 3*std, mean + 3*std)
-    return high_pass_clamped
+    p_low, p_high = np.percentile(high_pass, [1, 99])
+    clipped = np.clip(high_pass, p_low, p_high)
+    return clipped
