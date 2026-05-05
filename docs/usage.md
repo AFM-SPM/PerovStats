@@ -13,7 +13,7 @@ If you have any issues please email t.allwood@sheffield.ac.uk - I will get back 
 - The first code block is for imports and can be ignored. In the second code block there are paths for you to edit:
     - `img_file`
 
-        The input filepath (.spm or other). Two files are provided for you to test, simply remove the `# ` from one and add it to the start of the other to switch files.
+        The input filepath (.spm or other). Two files are provided for you to test, simply remove the `# ` from one and add it to the start of the other to switch files. Alternatively you can add your own filepath to run the program on.
     - `output_dir`
 
         The directory to save the results and output to. If the folder does not exist this will be created while running PerovStats.
