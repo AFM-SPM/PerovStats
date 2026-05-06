@@ -5,11 +5,11 @@ loading:
   channel: Height # Channel to pull data from in the data files.
 outliers:
   remove_outliers: true
-  max_z_score: 3
+  max_z_score: 3.2
 fourier:
   run: true
   edge_width: 0.03 # Width of the cutoff in frequency when performing the fourier split, as a fraction of the total frequency range. Higher values make the split less sensitive to cutoff choice.
-  cutoff_bounds: [0, 0.3] # Minimum and maximum cutoff points for frequency splitting.
+  cutoff_bounds: [-1, 1] # Minimum and maximum cutoff points for frequency splitting.
   min_rms: 10 # Minimum roughness mean score of a high-pass after splitting along the cutoff.
 segmentation:
   segmentation_method: traditional # Options: traditional, cellpose
@@ -31,7 +31,7 @@ pruning:
 remove_smears:
     run: true
     smooth_sigma: 1 # How much to smooth the high pass image before comparing gradients
-    smear_threshold: 1.9 # Minimum value for y gradient / x gradient in the high pass image, meaning possible smear
+    smear_threshold: 1.9 # Minimum value for y gradient / x gradient in the high pass image, meaning possible smear (because of strong horizontal lines)
     min_smear_size: 175 # in px^2, areas under this value are removed and ignored
     min_smear_area_percent: 6 # Minimum number of identified smear sections to not discount smear removal. If less they are considered to be in error.
     lowpass_threshold: 110 # Minimum horizontal gradient in the low pass image to be marked
