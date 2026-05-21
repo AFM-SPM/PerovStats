@@ -32,6 +32,7 @@ from loguru import logger
 from yaml import safe_load
 
 from .processing import run_process
+from .perovstats_gui import run_gui
 from .config import update_module
 
 
@@ -100,8 +101,15 @@ def create_parser() -> ArgumentParser:
         help="Process AFM images. Additional arguments over-ride defaults or those in the configuration file.",
     )
 
+    gui_parser = subparsers.add_parser(
+        "gui",
+        description="Process AFM images from a GUI.",
+        help="Process AFM images from a GUI.",
+    )
+
     # Run the relevant function with the arguments
     process_parser.set_defaults(func=process)
+    gui_parser.set_defaults(func=run_gui)
 
     return parser
 

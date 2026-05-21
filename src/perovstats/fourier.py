@@ -98,8 +98,10 @@ def split_frequencies(
         logger.info(f"[{image_object.filename}] : Frequency splitting is disabled by config, the original image will be used.")
         if image_object.image_flattened is not None:
             image_object.high_pass = image_object.image_flattened
+            image_object.low_pass = np.zeros_like(image_object.high_pass)
         else:
             image_object.high_pass = image_object.image_original
+            image_object.low_pass = np.zeros_like(image_object.high_pass)
 
     arr = image_object.image_original
     arr = normalise_array(arr)
