@@ -10,6 +10,7 @@ from skimage.segmentation import find_boundaries
 from skimage import morphology
 from scipy.ndimage import binary_fill_holes
 from scipy import stats
+import matplotlib.cm as cm
 
 from .core.classes import Grain, ImageData
 from .core.image_processing import normalise_array
@@ -210,6 +211,9 @@ def _create_grain_objects(
     return circularity_data
 
 def _save_mask_images(config, image_object, mask_data, filename, mask_details):
+    cmap = config["colour_scheme"]
+    get_cmap = cm.get_cmap(cmap)
+
     # Remove mask outlines of edge grains and smear grains from the mask
     mask_rgb = mask_data["mask_rgb"]
     mask_rgb[image_object.indent_mask > 0] = [0, 0, 0]
@@ -224,30 +228,32 @@ def _save_mask_images(config, image_object, mask_data, filename, mask_details):
     image_object.cleaned_mask = new_mask
 
     # Save the cleaned mask
-    save_image(new_mask, save_dir, f"{filename}_mask.png")
+    save_image(new_mask, save_dir, f"{filename}_mask.png", cmap=cmap)
 
     # Save high-pass with mask overlay
     high_pass = image_object.high_pass
-    rgb_highpass = np.stack((high_pass,)*3, axis=-1)
-    rgb_highpass = normalise_array(rgb_highpass)
-    rgb_highpass[new_mask > 0] = [1, 0, 0]
-    save_image(rgb_highpass, save_dir, f"{filename}_highpass_mask_overlay.png")
+    norm_highpass = normalise_array(high_pass)
+    rgba_highpass = get_cmap(norm_highpass)
+    rgb_highpass = rgba_highpass[..., :3]
+    rgb_highpass[new_mask > 0] = [0, 0, 1]
+    save_image(rgb_highpass, save_dir, f"{filename}_highpass_mask_overlay.png", cmap=cmap)
 
     # Save original image with mask overlay
     original = image_object.image_original
-    rgb_original = np.stack((original,)*3, axis=-1)
-    rgb_original = normalise_array(rgb_original)
-    rgb_original[new_mask > 0] = [1, 0, 0]
-    save_image(rgb_original, save_dir, f"{filename}_original_mask_overlay.png")
+    norm_original = normalise_array(original)
+    rgba_original = get_cmap(norm_original)
+    rgb_original = rgba_original[..., :3]
+    rgb_original[new_mask > 0] = [0, 0, 1]
+    save_image(rgb_original, save_dir, f"{filename}_original_mask_overlay.png", cmap=cmap)
 
-    # Save the high-pass image with solid grains and red sections identifying smear areas
+    # Save the high-pass image with solid grains and pink sections identifying smear areas
     save_image(mask_rgb, save_dir, f"{filename}_rgb_grains.png", cmap=None)
     smear_overlay = np.stack((image_object.high_pass,)*3, axis=-1)
     smear_overlay = normalise_array(smear_overlay)
     mask_2d = np.all(mask_rgb == 0, axis=2)
     smear_overlay[mask_2d == 0] = [1, 1, 1]
-    smear_overlay[image_object.smears == 1] = [1, 0, 0]
-    save_image(smear_overlay, save_dir, f"{filename}_smears.png")
+    smear_overlay[image_object.smears == 1] = [1, 0, 1]
+    save_image(smear_overlay, save_dir, f"{filename}_smears.png", cmap=cmap)
 
     # Save area and circularity data for all grains and export a histogram of them each
     image_object.mask_areas = mask_details['areas']
