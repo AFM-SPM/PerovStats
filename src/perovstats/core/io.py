@@ -5,7 +5,6 @@ from yaml import safe_dump
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-import matplotlib.patheffects as path_effects
 import pandas as pd
 import seaborn as sns
 from skimage import morphology
