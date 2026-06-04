@@ -65,7 +65,9 @@ def dummy_grain_object(dummy_grain_mask) -> Grain:
         grain_id=0,
         grain_mask=dummy_grain_mask,
         grain_area=10.2,
-        grain_circularity_rating=0.6
+        grain_circularity_rating=0.6,
+        grain_centre_coords=(0,0),
+        grain_size_px=(10,10)
     )
     return grain
 

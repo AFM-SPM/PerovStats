@@ -13,6 +13,10 @@ from perovstats.core.classes import Grain, ImageData
                 "grain_circularity": 0.6,
                 "grain_volume": None,
                 "indented": False,
+                'bbox_centre_x': 0,
+                'bbox_centre_y': 0,
+                'bbox_height_px': 10,
+                'bbox_width_px': 10,
             }
         ),
     ]
