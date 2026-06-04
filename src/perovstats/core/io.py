@@ -10,6 +10,7 @@ import pandas as pd
 import seaborn as sns
 from skimage import morphology
 from loguru import logger
+from topostats.plottingfuncs import Images
 
 from .classes import ImageData
 from .image_processing import normalise_array
@@ -30,6 +31,7 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
     """
     cmap = config["colour_scheme"]
     get_cmap = cm.get_cmap(cmap)
+    mask_cmap = 'bwr'
     output_dir = Path(config["output_dir"])
     filename = image_object.filename
     file_output_dir = Path(output_dir / filename)
@@ -54,134 +56,161 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
         high_pass = image_object.high_pass
         vmin = high_pass.min()
         vmax = high_pass.max()
-        norm_highpass = normalise_array(high_pass)
-        rgba_highpass = get_cmap(norm_highpass)
-        rgb_highpass = rgba_highpass[..., :3]
-        rgb_highpass[new_mask > 0] = [0, 0, 1]
-        save_image(
-            rgb_highpass,
-            save_dir,
-            f"{filename}_highpass_mask_overlay.png",
+        Images(
+            data=high_pass,
+            output_dir=save_dir,
+            filename=f"{filename}_highpass_mask_overlay",
+            pixel_to_nm_scaling=image_object.pixel_to_nm_scaling,
+            title="Highpass with mask",
             cmap=cmap,
-            vmin=vmin,
-            vmax=vmax,
-            pixel_to_nm_scaling=image_object.pixel_to_nm_scaling
-        )
+            zrange=[vmin,vmax],
+            masked_array=new_mask,
+            mask_cmap=mask_cmap,
+            savefig_dpi=400,
+            axes=False
+        ).save_figure()
 
     if "highpass" in image_set:
+        high_pass = image_object.high_pass
         vmin = image_object.high_pass.min()
         vmax = image_object.high_pass.max()
-        save_image(
-            image_object.high_pass,
-            save_dir,
-            f"{filename}_highpass.png",
+        Images(
+            data=high_pass,
+            output_dir=save_dir,
+            filename=f"{filename}_highpass",
+            pixel_to_nm_scaling=image_object.pixel_to_nm_scaling,
+            title="Highpass",
             cmap=cmap,
-            vmin=vmin,
-            vmax=vmax,
-            pixel_to_nm_scaling=image_object.pixel_to_nm_scaling
-        )
+            zrange=[vmin,vmax],
+            axes=False
+        ).save_figure()
 
     if "lowpass" in image_set:
+        low_pass = image_object.low_pass
         vmin=image_object.low_pass.min()
         vmax=image_object.low_pass.max()
-        save_image(
-            image_object.low_pass,
-            save_dir,
-            f"{filename}_lowpass.png",
+        Images(
+            data=low_pass,
+            output_dir=save_dir,
+            filename=f"{filename}_lowpass",
+            pixel_to_nm_scaling=image_object.pixel_to_nm_scaling,
+            title="Lowpass",
             cmap=cmap,
-            vmin=vmin,
-            vmax=vmax,
-            pixel_to_nm_scaling=image_object.pixel_to_nm_scaling
-        )
+            zrange=[vmin,vmax],
+            axes=False
+        ).save_figure()
 
     if "mask" in image_set:
-        save_image(new_mask, save_dir, f"{filename}_mask.png", cmap=cmap)
+        Images(
+            data=new_mask,
+            output_dir=save_dir,
+            filename=f"{filename}_mask",
+            pixel_to_nm_scaling=image_object.pixel_to_nm_scaling,
+            title="Binary Mask",
+            cmap=cmap,
+            image_type="binary",
+            axes=False
+        ).save_figure()
 
-    if "numbered_grains" in image_set:
-        # Create the original image with the mask overlayed
-        original = image_object.image_original
-        origmin = original.min()
-        origmax = original.max()
-        norm_original = normalise_array(original)
-        rgba_original = get_cmap(norm_original)
-        rgb_original = rgba_original[..., :3]
-        rgb_original[new_mask > 0] = [0, 0, 1]
+    # if "numbered_grains" in image_set:
+    #     # Create the original image with the mask overlayed
+    #     original = image_object.image_original
+    #     vmin = original.min()
+    #     vmax = original.max()
+    #     Images(
+    #         data=original,
+    #         output_dir=save_dir,
+    #         filename=f"{filename}_lowpass.png",
+    #         pixel_to_nm_scaling=image_object.pixel_to_nm_scaling,
+    #         title="Highpass with mask",
+    #         cmap=cmap,
+    #         zrange=[vmin,vmax],
+    #     ).save_figure()
 
-        # Create the high passed image with the mask overlayed
-        high_pass = image_object.high_pass
-        highmin = high_pass.min()
-        highmax = high_pass.max()
-        norm_highpass = normalise_array(high_pass)
-        rgba_highpass = get_cmap(norm_highpass)
-        rgb_highpass = rgba_highpass[..., :3]
-        rgb_highpass[new_mask > 0] = [0, 0, 1]
+    #     # Create the high passed image with the mask overlayed
+    #     high_pass = image_object.high_pass
+    #     highmin = high_pass.min()
+    #     highmax = high_pass.max()
+    #     norm_highpass = normalise_array(high_pass)
+    #     rgba_highpass = get_cmap(norm_highpass)
+    #     rgb_highpass = rgba_highpass[..., :3]
+    #     rgb_highpass[new_mask > 0] = [0, 0, 1]
 
-        # Create the figure and size appropriately to avoid anti-aliasing
-        dpi = 100
-        height, width, _ = rgb_original.shape
-        colourbar_width = 20
-        gap = 40
-        total_width = width + gap + colourbar_width
-        orig_fig = plt.figure(figsize=(total_width / dpi, height / dpi), dpi=dpi)
-        high_fig = plt.figure(figsize=(total_width / dpi, height / dpi), dpi=dpi)
-        ax_orig = orig_fig.add_axes([0,0,1,1])
-        ax_orig.set_title("Numbered grains (original)")
-        ax_orig.imshow(rgb_original, cmap='afmhot', interpolation='nearest')
-        ax_orig.axis('off')
-        ax_high = high_fig.add_axes([0,0,1,1])
-        ax_high.set_title("Numbered grains (highpass)")
-        ax_high.imshow(rgb_highpass, cmap='afmhot', interpolation='nearest')
-        ax_high.axis('off')
+    #     # Create the figure and size appropriately to avoid anti-aliasing
+    #     dpi = 100
+    #     height, width, _ = rgb_original.shape
+    #     colourbar_width = 20
+    #     gap = 40
+    #     total_width = width + gap + colourbar_width
+    #     orig_fig = plt.figure(figsize=(total_width / dpi, height / dpi), dpi=dpi)
+    #     high_fig = plt.figure(figsize=(total_width / dpi, height / dpi), dpi=dpi)
+    #     ax_orig = orig_fig.add_axes([0,0,1,1])
+    #     ax_orig.set_title("Numbered grains (original)")
+    #     ax_orig.imshow(rgb_original, cmap='afmhot', interpolation='nearest')
+    #     ax_orig.axis('off')
+    #     ax_high = high_fig.add_axes([0,0,1,1])
+    #     ax_high.set_title("Numbered grains (highpass)")
+    #     ax_high.imshow(rgb_highpass, cmap='afmhot', interpolation='nearest')
+    #     ax_high.axis('off')
 
-        # Place numbers on their respective grains
-        outline = [path_effects.withStroke(linewidth=1, foreground='black')]
-        for grain in image_object.grains.values():
-            id = grain.grain_id
-            (x, y) = grain.grain_centre_coords
-            offset = (0,0)
-            ax_orig.text(y+offset[0], x+offset[1], id, color="white", fontsize=3, ha="center", va="center", path_effects=outline)
-            ax_high.text(y+offset[0], x+offset[1], id, color="white", fontsize=3, ha="center", va="center", path_effects=outline)
+    #     # Place numbers on their respective grains
+    #     outline = [path_effects.withStroke(linewidth=1, foreground='black')]
+    #     for grain in image_object.grains.values():
+    #         id = grain.grain_id
+    #         (x, y) = grain.grain_centre_coords
+    #         offset = (0,0)
+    #         ax_orig.text(y+offset[0], x+offset[1], id, color="white", fontsize=3, ha="center", va="center", path_effects=outline)
+    #         ax_high.text(y+offset[0], x+offset[1], id, color="white", fontsize=3, ha="center", va="center", path_effects=outline)
 
-        orig_fig.savefig(save_dir / f"{filename}_original_numbered.png", bbox_inches="tight", pad_inches=0.1, dpi=dpi*4)
-        plt.close(orig_fig)
-        high_fig.savefig(save_dir / f"{filename}_highpass_numbered.png", bbox_inches="tight", pad_inches=0.1, dpi=dpi*4)
-        plt.close(high_fig)
+    #     orig_fig.savefig(save_dir / f"{filename}_original_numbered.png", bbox_inches="tight", pad_inches=0.1, dpi=dpi*4)
+    #     plt.close(orig_fig)
+    #     high_fig.savefig(save_dir / f"{filename}_highpass_numbered.png", bbox_inches="tight", pad_inches=0.1, dpi=dpi*4)
+    #     plt.close(high_fig)
 
     if "original_mask" in image_set:
         # Save original image with mask overlay
         original = image_object.image_original
         vmin = original.min()
         vmax = original.max()
-        norm_original = normalise_array(original)
-        rgba_original = get_cmap(norm_original)
-        rgb_original = rgba_original[..., :3]
-        rgb_original[new_mask > 0] = [0, 0, 1]
-        save_image(
-            rgb_original,
-            save_dir,
-            f"{filename}_original_mask_overlay.png",
+        Images(
+            data=original,
+            output_dir=save_dir,
+            filename=f"{filename}_original_mask",
+            pixel_to_nm_scaling=image_object.pixel_to_nm_scaling,
+            title="Original Image with Mask",
             cmap=cmap,
-            vmin=vmin,
-            vmax=vmax,
-            pixel_to_nm_scaling=image_object.pixel_to_nm_scaling
-        )
+            zrange=[vmin,vmax],
+            masked_array=new_mask,
+            mask_cmap=mask_cmap,
+            axes=False,
+            savefig_dpi=400,
+        ).save_figure()
 
     if "original" in image_set:
-        vmin = image_object.image_original.min()
-        vmax = image_object.image_original.max()
-        original_image = normalise_array(image_object.image_original)
-        save_image(
-            original_image,
-            file_output_dir / "images",
-            f"{filename}_original.png",
+        original = image_object.image_original
+        vmin = original.min()
+        vmax = original.max()
+        Images(
+            data=original,
+            output_dir=save_dir,
+            filename=f"{filename}_original",
+            pixel_to_nm_scaling=image_object.pixel_to_nm_scaling,
+            title="Original Image",
             cmap=cmap,
-            vmin=vmin,
-            vmax=vmax,
-            pixel_to_nm_scaling=image_object.pixel_to_nm_scaling
-        )
+            zrange=[vmin,vmax],
+            axes=False
+        ).save_figure()
 
     if "rgb_grains" in image_set:
-        save_image(image_object.mask_rgb, save_dir, f"{filename}_rgb_grains.png", cmap=None)
+        Images(
+            data=image_object.mask_rgb,
+            output_dir=save_dir,
+            filename=f"{filename}_rgb_grains",
+            pixel_to_nm_scaling=image_object.pixel_to_nm_scaling,
+            title="Coloured Grains",
+            axes=False,
+            colorbar=False
+        ).save_figure()
 
     if "smears" in image_set:
         norm_smears = normalise_array(image_object.high_pass)
@@ -191,7 +220,16 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
         rgba_smears[mask_2d == 0] = [1, 1, 1]
         rgba_smears[image_object.smears == 1] = [1, 0, 1]
 
-        save_image(rgba_smears, save_dir, f"{filename}_smears.png", cmap=cmap)
+        Images(
+            data=rgba_smears,
+            output_dir=save_dir,
+            filename=f"{filename}_smears",
+            pixel_to_nm_scaling=image_object.pixel_to_nm_scaling,
+            title="Highlighted Smears",
+            cmap=cmap,
+            zrange=[vmin,vmax],
+            axes=False
+        ).save_figure()
 
     logger.info(f"[{filename}] : Saved {len(image_set)} images to {save_dir}")
 

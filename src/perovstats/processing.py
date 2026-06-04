@@ -47,7 +47,6 @@ def run_process(
     # Create the dataclasses for the whole process and for each image found
     perovstats_object = PerovStats(config=config, images=[])
     for filename, topostats_object in image_dicts.items():
-        print(topostats_object.__dict__.keys())
         image_data = ImageData(
             success=True,
             filename=filename,
