@@ -39,6 +39,8 @@ class Grain:
     grain_volume: float | None = None
     indent_mask: np.ndarray | None = None
     grain_bbox: tuple[int] | None = None
+    grain_size_px: tuple[int] | None = None
+    grain_centre_coords: tuple[int] | None = None
 
     def to_dict(self) -> dict:
         """
@@ -51,12 +53,17 @@ class Grain:
         dict
             Dictionary of all values to be saved to csv.
         """
+
         return {
             "grain_id": self.grain_id,
             "grain_area": self.grain_area,
             "grain_circularity": self.grain_circularity_rating,
             "grain_volume": self.grain_volume,
-            "indented": self.indented
+            "indented": self.indented,
+            "bbox_centre_x": self.grain_centre_coords[0],
+            "bbox_centre_y": self.grain_centre_coords[1],
+            "bbox_width_px": self.grain_size_px[0],
+            "bbox_height_px": self.grain_size_px[1],
         }
 
 

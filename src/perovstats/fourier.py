@@ -9,13 +9,13 @@ from scipy.special import erf
 from scipy.optimize import bisect
 
 from .core.classes import ImageData
-from .core.image_processing import extend_image, normalise_array
-from .core.io import save_image
+from .core.image_processing import extend_image
 
 
 def split_frequencies(
     config: dict[str, any],
-    image_object: ImageData
+    image_object: ImageData,
+    split_freq: float = None,
 ) -> None:
     """
     Carry out frequency splitting on an image.
@@ -53,20 +53,23 @@ def split_frequencies(
 
         logger.info(f"[{filename}] : *** Frequency splitting ***")
 
-        cutoff = find_cutoff(
-            image_object,
-            edge_width=edge_width,
-            min_cutoff=min_cutoff,
-            max_cutoff=max_cutoff,
-            min_rms=min_rms,
-            pixel_to_nm_scaling=pixel_to_nm_scaling
-        )
+        if split_freq is None:
 
-        if not cutoff:
-            logger.error(f"[{filename}] : Cutoff frequency could not be determined, try adjusting the cutoff_bounds parameter. Skipping image..")
-            image_object.success = False
-            return
+            cutoff = find_cutoff(
+                image_object,
+                edge_width=edge_width,
+                min_cutoff=min_cutoff,
+                max_cutoff=max_cutoff,
+                min_rms=min_rms,
+                pixel_to_nm_scaling=pixel_to_nm_scaling
+            )
 
+            if not cutoff:
+                logger.error(f"[{filename}] : Cutoff frequency could not be determined, try adjusting the cutoff_bounds parameter. Skipping image..")
+                image_object.success = False
+                return
+        else:
+            cutoff = split_freq
         cutoff_nm = 2 * pixel_to_nm_scaling / cutoff
         logger.info(f"[{image_object.filename}] : Frequency cutoff: {round(cutoff, 4)} ({round(cutoff_nm, 4)}nm)")
 
@@ -81,29 +84,19 @@ def split_frequencies(
             edge_width=edge_width,
         )
 
-        high_pass = remove_extremes(high_pass)
+        # high_pass = remove_extremes(high_pass)
 
         image_object.high_pass = high_pass
         image_object.low_pass = low_pass
         image_object.file_directory = file_output_dir
-
-        # Convert high-pass and low-pass to image format
-        arr = high_pass
-        img_dir = Path(file_output_dir) / "images"
-        save_image(arr, img_dir, f"{filename}_highpass.png", cmap="grey")
-
-        arr = low_pass
-        save_image(arr, img_dir, f"{filename}_lowpass.png", cmap="grey")
     else:
         logger.info(f"[{image_object.filename}] : Frequency splitting is disabled by config, the original image will be used.")
         if image_object.image_flattened is not None:
             image_object.high_pass = image_object.image_flattened
+            image_object.low_pass = np.zeros_like(image_object.high_pass)
         else:
             image_object.high_pass = image_object.image_original
-
-    arr = image_object.image_original
-    arr = normalise_array(arr)
-    save_image(arr, file_output_dir / "images", f"{filename}_original.png", cmap="grey")
+            image_object.low_pass = np.zeros_like(image_object.high_pass)
 
 
 def perform_fourier(

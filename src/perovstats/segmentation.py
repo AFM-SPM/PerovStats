@@ -76,13 +76,13 @@ def segment_image_cellpose(config: dict[str, any], image_object: ImageData) -> N
     # diameter: the px diameter of a grain. As grain sizes differ aim for an average value
     # flow_threshold: How sensitive the segmentation should be. Higher values create more grains, lower values reduce
     # cellprob_threshold: Threshold to mark area as grain based on the probability it is one.
-    masks, flows, styles = model.eval(
+    masks, _, _ = model.eval(
         image_object.high_pass,
         diameter=None,
         flow_threshold=CELLPOSE_FLOW_THRESHOLD,
         cellprob_threshold=CELLPOSE_PROB_THRESHOLD,
-        resample=True,
         min_size=CELLPOSE_MIN_SIZE,
+        tile_overlap=0.2,
     )
 
     logger.success(f"[{image_object.filename}] : Mask created, Returning image to original size.")

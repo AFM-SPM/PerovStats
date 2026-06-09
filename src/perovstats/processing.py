@@ -7,7 +7,7 @@ from topostats.io import LoadScans
 import pandas as pd
 
 from .core.classes import ImageData, PerovStats
-from .core.io import save_to_csv, save_config
+from .core.io import save_to_csv, save_config, save_images
 from .segmentation import segment_image
 from .grains import find_grains
 from .fourier import split_frequencies
@@ -36,13 +36,12 @@ def run_process(
     time_start = time.perf_counter()
 
     # Load scans
-    load_config = config["loading"]
     loadscans = LoadScans(img_files, config)
     try:
         loadscans.get_data()
     except ValueError as e:
         logger.warning(e)
-        logger.warning(f"Channel {load_config['channel']} not found in file. Please ensure the config option is correct and all files contain the required channel.")
+        logger.warning(f"Channel {config['loading']['channel']} not found in file. Please ensure the config option is correct and all files contain the required channel.")
     image_dicts = loadscans.img_dict
 
     # Create the dataclasses for the whole process and for each image found
@@ -53,7 +52,8 @@ def run_process(
             filename=filename,
             pixel_to_nm_scaling=topostats_object.pixel_to_nm_scaling,
             image_original=topostats_object.image_original,
-            image_flattened=None)
+            image_flattened=topostats_object.image_original * topostats_object.pixel_to_nm_scaling
+        )
         perovstats_object.images.append(image_data)
 
     logger.info("----------------------------------------------------------")
@@ -89,6 +89,8 @@ def run_process(
         for grain in image_object.grains.values():
             grains_list.append(grain.to_dict())
         grain_df = pd.DataFrame(grains_list)
+
+        save_images(perovstats_object.config, image_object)
 
         output_filename = f"{output_dir}/{image_object.filename}/image_statistics.csv"
         save_to_csv(image_df, output_filename)
