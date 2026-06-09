@@ -333,7 +333,6 @@ class Images:
                 cax = divider.append_axes("right", size="5%", pad=0.05)
                 plt.colorbar(im, cax=cax, label="Height (Nanometres)")
             if self.region_properties:
-                # fig, ax = add_bounding_boxes_to_plot(fig, ax, shape, self.region_properties, self.pixel_to_nm_scaling)
                 if self.number_grains:
                     fig, ax = number_grain_plots(
                         fig,
@@ -485,8 +484,9 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
     variation : str
         For notebooks processing the same data for each segmentation method.
     """
-    cmap = config["colour_scheme"]
+    cmap = config["output"]["colour_scheme"]
     number_grains = config["output"]["number_grains"]
+    colorbar = config["output"]["height_scale"]
     get_cmap = cm.get_cmap(cmap)
     mask_cmap = 'bwr'
     output_dir = Path(config["output_dir"])
@@ -530,7 +530,8 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             axes=False,
             pad_inches=20,
             number_grains=number_grains,
-            region_properties=mask_regionprops
+            region_properties=mask_regionprops,
+            colorbar=colorbar
         ).save_figure()
 
     if "highpass" in image_set:
@@ -545,7 +546,8 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             title="Highpass",
             cmap=cmap,
             zrange=[vmin,vmax],
-            axes=False
+            axes=False,
+            colorbar=colorbar
         ).save_figure()
 
     if "lowpass" in image_set:
@@ -560,7 +562,8 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             title="Lowpass",
             cmap=cmap,
             zrange=[vmin,vmax],
-            axes=False
+            axes=False,
+            colorbar=colorbar
         ).save_figure()
 
     if "mask" in image_set:
@@ -635,22 +638,24 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
         original = image_object.image_original
         vmin = original.min()
         vmax = original.max()
-        Images(
-            data=original,
-            output_dir=save_dir,
-            filename=f"{filename}_original_mask",
-            pixel_to_nm_scaling=image_object.pixel_to_nm_scaling,
-            title="Original Image with Mask",
-            cmap=cmap,
-            zrange=[vmin,vmax],
-            masked_array=new_mask,
-            mask_cmap=mask_cmap,
-            axes=False,
-            savefig_dpi=400,
-            pad_inches=20,
-            number_grains=number_grains,
-            region_properties=mask_regionprops
-        ).save_figure()
+        if config["output"]["heightscale"]:
+            Images(
+                data=original,
+                output_dir=save_dir,
+                filename=f"{filename}_original_mask",
+                pixel_to_nm_scaling=image_object.pixel_to_nm_scaling,
+                title="Original Image with Mask",
+                cmap=cmap,
+                zrange=[vmin,vmax],
+                masked_array=new_mask,
+                mask_cmap=mask_cmap,
+                axes=False,
+                savefig_dpi=400,
+                pad_inches=20,
+                number_grains=number_grains,
+                region_properties=mask_regionprops,
+                colorbar=colorbar
+            ).save_figure()
 
     if "original" in image_set:
         original = image_object.image_original
@@ -664,7 +669,8 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             title="Original Image",
             cmap=cmap,
             zrange=[vmin,vmax],
-            axes=False
+            axes=False,
+            colorbar=colorbar
         ).save_figure()
 
     if "rgb_grains" in image_set:
@@ -694,7 +700,8 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             title="Highlighted Smears",
             cmap=cmap,
             zrange=[vmin,vmax],
-            axes=False
+            axes=False,
+            colorbar=colorbar
         ).save_figure()
 
     logger.info(f"[{filename}] : Saved {len(image_set)} images to {save_dir}")

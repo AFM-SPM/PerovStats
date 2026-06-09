@@ -1,7 +1,6 @@
 base_dir: ./example images/ # Directory in which to search for data files
 output_dir: ./output # Directory to output results to
 file_ext: ".spm" # File extension of the data files.
-colour_scheme: "afmhot"
 loading:
   channel: Height # Channel to pull data from in the data files.
 outliers:
@@ -37,6 +36,8 @@ remove_smears:
     min_smear_area_percent: 6 # Minimum number of identified smear sections to not discount smear removal. If less they are considered to be in error.
     lowpass_threshold: 130 # Minimum horizontal gradient in the low pass image to be marked
 output:
+  height_scale: True
+  colour_scheme: afmhot
   image_set:
     - "highpass_mask"
     - "highpass"
