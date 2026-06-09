@@ -10,11 +10,9 @@ from skimage.segmentation import find_boundaries
 from skimage import morphology
 from scipy.ndimage import binary_fill_holes
 from scipy import stats
-import matplotlib.cm as cm
 
 from .core.classes import Grain, ImageData
-from .core.image_processing import normalise_array
-from .core.io import save_image, grain_area_histogram, grain_circularity_histogram
+from .core.io import grain_area_histogram, grain_circularity_histogram
 from .smears import clean_smears
 
 MIN_DIST_FROM_EDGE = 4
