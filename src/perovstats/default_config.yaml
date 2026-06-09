@@ -47,3 +47,4 @@ output:
     - "original"
     - "rgb_grains"
     - "smears"
+  number_grains: True

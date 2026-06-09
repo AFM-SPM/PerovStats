@@ -486,6 +486,7 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
         For notebooks processing the same data for each segmentation method.
     """
     cmap = config["colour_scheme"]
+    number_grains = config["output"]["number_grains"]
     get_cmap = cm.get_cmap(cmap)
     mask_cmap = 'bwr'
     output_dir = Path(config["output_dir"])
@@ -528,7 +529,7 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             savefig_dpi=400,
             axes=False,
             pad_inches=20,
-            number_grains=True,
+            number_grains=number_grains,
             region_properties=mask_regionprops
         ).save_figure()
 
@@ -647,7 +648,7 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             axes=False,
             savefig_dpi=400,
             pad_inches=20,
-            number_grains=True,
+            number_grains=number_grains,
             region_properties=mask_regionprops
         ).save_figure()
 
