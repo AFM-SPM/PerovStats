@@ -638,7 +638,7 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
         original = image_object.image_original
         vmin = original.min()
         vmax = original.max()
-        if config["output"]["heightscale"]:
+        if config["output"]["height_scale"]:
             Images(
                 data=original,
                 output_dir=save_dir,
