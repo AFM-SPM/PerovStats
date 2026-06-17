@@ -245,7 +245,7 @@ def process(args: list[str] | None = None) -> None:
 
     cli_args = {k: v for k, v in vars(args).items() if v is not None}
 
-    # Assign fourier-specific command line arguments to the fourier subsection of config
+    # Assign section-specific command line arguments to the relative subsection of config
     if 'fourier' not in config:
         config['fourier'] = {}
     for k in fourier_keys:

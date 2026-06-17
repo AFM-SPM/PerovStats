@@ -41,14 +41,15 @@ def prune_mask(config, image_object: ImageData) -> None:
         dist_map = distance_transform_edt(~mask)
         # Loop through every pixel and assign 0, 1, or 2.
         #   0: not in mask
-        #   1: along a mask line
-        #   2: at the end of a mask line (only one connection)
+        #   1: along a mask line (multiple neighbours)
+        #   2: at the end of a mask line (only one neighbour)
         height, width = mask.shape
         for row in range(1, height-1):
             for col in range(1, width-1):
                 end_pixels[row, col] = get_connections(mask, row, col)
+                # If a pixel only has one neighbour i.e. is an end pixel
                 if end_pixels[row, col] == 2:
-                    # Get length of unconnected line
+                    # Get length of unconnected line (n pixels from end to closest junction along line)
                     line = get_line(mask, (row, col))
                     # Remove line coords from end_pixels arr so a line with two endpoints isn't
                     # processed twice
@@ -100,6 +101,7 @@ def get_connections(mask: np.ndarray, row: int, col: int) -> np.ndarray:
     int
         0, 1 or 2 signifying the pixel type.
     """
+    # If pixel was removed in a previous iteration
     if not mask[row, col]:
         return 0
 

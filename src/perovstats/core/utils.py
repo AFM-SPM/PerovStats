@@ -51,6 +51,7 @@ class Skeletonisation:
         npt.NDArray
             The single pixel thick, skeletonised array.
         """
+        # Main process, skeletonise the mask
         priority_map = self.calculate_priority_map()
         self.skeletonise_with_bias(priority_map)
 

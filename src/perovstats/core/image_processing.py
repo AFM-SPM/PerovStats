@@ -77,7 +77,11 @@ def extend_image(
     method: int = cv2.BORDER_REFLECT,
 ) -> tuple[np.ndarray, dict]:
     """
-    Extend image on all sides by specified method.
+    Extend image on all sides using a specified method.
+    This is required to give edge pixels neighbours on all sides
+    which is needed for segmentation.
+
+    This change is temporary, extended areas are removed before outputting results.
 
     Parameters
     ----------
