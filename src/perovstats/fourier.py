@@ -53,8 +53,8 @@ def split_frequencies(
 
         logger.info(f"[{filename}] : *** Frequency splitting ***")
 
+        # Skip cutoff detection if a frequency has already been selected (via notebook sliders)
         if split_freq is None:
-
             cutoff = find_cutoff(
                 image_object,
                 edge_width=edge_width,
@@ -83,8 +83,6 @@ def split_frequencies(
             cutoff=cutoff,
             edge_width=edge_width,
         )
-
-        # high_pass = remove_extremes(high_pass)
 
         image_object.high_pass = high_pass
         image_object.low_pass = low_pass

@@ -52,6 +52,7 @@ def find_grains(
     labelled_mask, border_grains = tidy_border(labelled_mask, MIN_DIST_FROM_EDGE)
     image_object.edge_grains = border_grains
 
+    # Remove grains not meeting minimum size requirements
     labelled_mask = remove_small_grains(labelled_mask, MIN_GRAIN_SIZE)
 
     # Remove grains in/ touching smears
@@ -59,6 +60,7 @@ def find_grains(
         labelled_mask, removed_mask = clean_smears(labelled_mask, image_object.smears)
         image_object.smear_grains = removed_mask
 
+    # Remove grains with sizes or shapes outside n std devs of mean (n defined in config)
     if config["outliers"]["remove_outliers"]:
         labelled_mask, num_removed = remove_outliers(config, labelled_mask, pixel_to_nm_scaling, "area")
         logger.info(f"[{filename}] : {num_removed} grains considered outliers due to size and removed from the data.")
@@ -222,58 +224,8 @@ def _create_grain_objects(
             grain_centre_coords=(centre_x, centre_y),
         )
 
+    # WARNING: return potentially not needed/ used?
     return circularity_data
-
-# def _save_mask_images(config, image_object, mask_data, filename, mask_details):
-#     cmap = config["colour_scheme"]
-#     get_cmap = cm.get_cmap(cmap)
-
-#     # Remove mask outlines of edge grains and smear grains from the mask
-#     mask_rgb = mask_data["mask_rgb"]
-#     mask_rgb[image_object.indent_mask > 0] = [0, 0, 0]
-#     image_object.mask_rgb = mask_rgb
-#     save_dir = Path(config["output_dir"]) / filename / "images"
-#     new_mask = image_object.mask.copy()
-
-#     new_mask[image_object.edge_grains] = 0
-#     new_mask[image_object.smear_grains] = 0
-#     # Remove single pixels left in the smear area by accident
-#     new_mask = morphology.remove_small_objects(new_mask, max_size=1, connectivity=2)
-#     image_object.cleaned_mask = new_mask
-
-#     # Save the cleaned mask
-#     # save_image(new_mask, save_dir, f"{filename}_mask.png", cmap=cmap)
-
-#     # Save high-pass with mask overlay
-#     high_pass = image_object.high_pass
-#     norm_highpass = normalise_array(high_pass)
-#     rgba_highpass = get_cmap(norm_highpass)
-#     rgb_highpass = rgba_highpass[..., :3]
-#     rgb_highpass[new_mask > 0] = [0, 0, 1]
-#     # save_image(rgb_highpass, save_dir, f"{filename}_highpass_mask_overlay.png", cmap=cmap)
-
-#     # Save original image with mask overlay
-#     original = image_object.image_original
-#     norm_original = normalise_array(original)
-#     rgba_original = get_cmap(norm_original)
-#     rgb_original = rgba_original[..., :3]
-#     rgb_original[new_mask > 0] = [0, 0, 1]
-#     # save_image(rgb_original, save_dir, f"{filename}_original_mask_overlay.png", cmap=cmap)
-
-#     # Save the high-pass image with solid grains and pink sections identifying smear areas
-#     save_image(mask_rgb, save_dir, f"{filename}_rgb_grains.png", cmap=None)
-#     smear_overlay = np.stack((image_object.high_pass,)*3, axis=-1)
-#     smear_overlay = normalise_array(smear_overlay)
-#     mask_2d = np.all(mask_rgb == 0, axis=2)
-#     smear_overlay[mask_2d == 0] = [1, 1, 1]
-#     smear_overlay[image_object.smears == 1] = [1, 0, 1]
-#     # save_image(smear_overlay, save_dir, f"{filename}_smears.png", cmap=cmap)
-
-#     # Save area and circularity data for all grains and export a histogram of them each
-#     image_object.mask_areas = mask_details['areas']
-#     image_object.circularity_data = mask_details['circularities']
-#     grain_area_histogram(mask_details['areas'], filename, save_dir)
-#     grain_circularity_histogram(mask_details['circularities'], filename, save_dir)
 
 
 def _find_circularity_rating(grain_area: float, grain_perimeter: float) -> float:
