@@ -37,6 +37,7 @@ def find_smear_areas(
         smooth_sigma= config["smooth_sigma"]
         min_size = config["min_smear_size"]
         min_smear_area_percent = config["min_smear_area_percent"]
+        print(min_smear_area_percent)
         lowpass_threshold = config["lowpass_threshold"]
 
         high_pass = image_object.high_pass
@@ -51,7 +52,8 @@ def find_smear_areas(
         grad_x = np.abs(ndi.sobel(smooth, axis=1))
         grad_y = np.abs(ndi.sobel(smooth, axis=0))
 
-        # Value given to each pixel based on the difference between horizontal and vertical gradient
+        # Value given to each pixel based on the difference between horizontal and vertical gradient between it
+        # and neighbouring pixels
         stripe_score = grad_y / (grad_x + 1e-6) # 1e-6 prevents 0 division
 
         mask = stripe_score > threshold
@@ -70,7 +72,7 @@ def find_smear_areas(
         final_mask = mask & low_pass_gradient_mask
         final_mask = binary_dilation(final_mask, structure=STANDARD_DILATION_KERNEL)
 
-        # Remove smears not meeting minimum area requirements
+        # Again remove smears not meeting minimum area requirements
         labeled, n = label(final_mask)
         for i in range(1, n+1):
             if np.sum(labeled == i) < min_size:
