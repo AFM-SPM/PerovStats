@@ -42,6 +42,7 @@ class Images:
         filename: str,
         title: str,
         pixel_to_nm_scaling: float,
+        font_size: float,
         mask_data: npt.NDArray | None = None,
         number_grains: bool = False,
         use_scalebar: bool = False,
@@ -58,6 +59,7 @@ class Images:
         self.filename = filename
         self.title = title
         self.pixel_to_nm_scaling = pixel_to_nm_scaling
+        self.font_size = font_size
         self.number_grains = number_grains
         self.use_scalebar = use_scalebar
         self.cmap = cmap
@@ -80,6 +82,7 @@ class Images:
                 units="nm",
                 box_alpha=0.9,
                 location="lower right",
+                font_properties={"size": self.font_size},
             )
             ax.add_artist(scalebar)
 
@@ -102,15 +105,15 @@ class Images:
                 cmap="spring"
             )
 
-        plt.title(self.title)
-        plt.xlabel("Nanometres")
-        plt.ylabel("Nanometres")
+        plt.title(self.title, fontsize=self.font_size)
+        plt.xlabel("Nanometres", fontsize=self.font_size)
+        plt.ylabel("Nanometres", fontsize=self.font_size)
         plt.axis(self.axes)
 
         # Add grain numbers to the image, requires the region_properties dict to be passed into the class.
         # This will also mean calculations will have to be done for interpolation to avoid blurry edges in the data.
         if self.number_grains:
-            fig, ax, font_size = number_grain_plots(
+            fig, ax = number_grain_plots(
                 fig,
                 ax,
                 self.region_properties
@@ -233,24 +236,26 @@ def number_grain_plots(
         numbering = ax.text(x_loc, y_loc, i, fontsize=font_size, color="white", ha="center", va="center")
         # Border (black)
         numbering.set_path_effects([path_effects.Stroke(linewidth=1, foreground="black"), path_effects.Normal()])
-    # font_size is also returned for use in dpi calculations
-    return fig, ax, font_size
+
+    return fig, ax
 
 
 def save_images(config: dict[str, any], image_object: ImageData, variation: str=None) -> None:
-    cmap = config["output"]["colour_scheme"]
-    number_grains = config["output"]["number_grains"]
-    image_set = config["output"]["image_set"]
-    scalebar = config["output"]["scalebar"]
+    output_config = config["output"]
+    cmap = output_config["colour_scheme"]
+    number_grains = output_config["number_grains"]
+    image_set = output_config["image_set"]
+    scalebar = output_config["scalebar"]
+    font_size = output_config["font_size"]
     output_dir = Path(config["output_dir"])
 
     filename = image_object.filename
     file_output_dir = Path(output_dir / filename)
     file_output_dir.mkdir(parents=True, exist_ok=True)
     if variation:
-        save_dir = Path(config["output_dir"]) / filename / "images" / variation
+        save_dir = file_output_dir / "images" / variation
     else:
-        save_dir = Path(config["output_dir"]) / filename / "images"
+        save_dir = file_output_dir / "images"
 
     # Remove mask sections that overlap with smear areas
     new_mask = image_object.mask.copy()
@@ -286,6 +291,7 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             region_properties=mask_regionprops,
             dpi=dpi,
             use_scalebar=scalebar,
+            font_size=font_size,
         ).save_figure()
 
     if "highpass" in image_set:
@@ -298,6 +304,7 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             cmap=cmap,
             dpi=dpi,
             use_scalebar=scalebar,
+            font_size=font_size,
         ).save_figure()
 
     if "lowpass" in image_set:
@@ -309,7 +316,8 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             title="Lowpass",
             cmap=cmap,
             dpi=dpi,
-            use_scalebar=scalebar
+            use_scalebar=scalebar,
+            font_size=font_size,
         ).save_figure()
 
     if "original_mask" in image_set:
@@ -325,6 +333,7 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             region_properties=mask_regionprops,
             dpi=dpi,
             use_scalebar=scalebar,
+            font_size=font_size,
         ).save_figure()
 
     if "original" in image_set:
@@ -336,7 +345,8 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             title="Original",
             cmap=cmap,
             dpi=dpi,
-            use_scalebar=scalebar
+            use_scalebar=scalebar,
+            font_size=font_size,
         ).save_figure()
 
     if "rgb_grains" in image_set:
@@ -347,7 +357,8 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             pixel_to_nm_scaling=image_object.pixel_to_nm_scaling,
             title="Coloured Grains",
             dpi=dpi,
-            use_scalebar=scalebar
+            use_scalebar=scalebar,
+            font_size=font_size,
         ).save_figure()
 
     if "smears" in image_set:
@@ -362,6 +373,7 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             dpi=dpi,
             use_scalebar=scalebar,
             smears=image_object.smears,
+            font_size=font_size,
         ).save_figure()
 
 

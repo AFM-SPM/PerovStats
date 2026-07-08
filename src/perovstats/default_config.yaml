@@ -5,7 +5,7 @@ loading:
   channel: Height # Channel to pull data from in the data files.
 outliers:
   remove_outliers: true
-  max_z_score: 6
+  max_z_score: 5
 fourier:
   run: true
   edge_width: 0.03 # Width of the cutoff in frequency when performing the fourier split, as a fraction of the total frequency range. Higher values make the split less sensitive to cutoff choice.
@@ -47,3 +47,4 @@ output:
     - "smears"
   number_grains: true
   scalebar: true
+  font_size: 12 # Font size of text other than grain numbers such as legends and titles.
