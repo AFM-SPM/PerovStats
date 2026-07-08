@@ -33,19 +33,17 @@ remove_smears:
     smooth_sigma: 1 # How much to smooth the high pass image before comparing gradients
     smear_threshold: 2.2 # Minimum value for y gradient / x gradient in the high pass image, meaning possible smear (because of strong horizontal lines)
     min_smear_size: 175 # in px^2, areas under this value are removed and ignored
-    min_smear_area_percent: 6 # Minimum number of identified smear sections to not discount smear removal. If less they are considered to be in error.
-    lowpass_threshold: 130 # Minimum horizontal gradient in the low pass image to be marked
+    min_smear_area_percent: 4 # Minimum number of identified smear sections to not discount smear removal. If less they are considered to be in error.
+    lowpass_threshold: 150 # Minimum horizontal gradient in the low pass image to be marked
 output:
-  height_scale: True
   colour_scheme: afmhot
   image_set:
     - "highpass_mask"
     - "highpass"
     - "lowpass"
-    - "mask"
-    - "numbered_grains"
     - "original_mask"
     - "original"
     - "rgb_grains"
     - "smears"
-  number_grains: True
+  number_grains: true
+  scalebar: true
