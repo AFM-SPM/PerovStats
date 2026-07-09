@@ -73,7 +73,7 @@ def dummy_grain_object(dummy_grain_mask) -> Grain:
 
 
 @pytest.fixture
-def dummy_image_data_object(dummy_mask, dummy_high_pass, dummy_low_pass, dummy_original_image, dummy_grain_object, tmp_path) -> ImageData:
+def dummy_image_data_object(dummy_mask, dummy_high_pass, dummy_low_pass, dummy_original_image, dummy_grain_object) -> ImageData:
     image_data = ImageData(
         success=True,
         image_original=dummy_original_image,
@@ -83,7 +83,6 @@ def dummy_image_data_object(dummy_mask, dummy_high_pass, dummy_low_pass, dummy_o
         low_pass=dummy_low_pass,
         smears=np.zeros_like(dummy_mask, dtype=bool),
         grains={0: dummy_grain_object},
-        file_directory=tmp_path,
         filename="dummy_filename",
         mask_rgb=dummy_mask,
         grains_per_nm2=2,

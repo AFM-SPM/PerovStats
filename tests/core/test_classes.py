@@ -35,7 +35,6 @@ def test_grain_to_dict(
     [
         pytest.param(
             {
-                'file_dir': 'tmp_path',
                 'filename': 'dummy_filename',
                 'grains_per_nm2': 2,
                 'mask_area_nm': 100,
@@ -55,9 +54,7 @@ def test_grain_to_dict(
 def test_image_data_to_dict(
         dummy_image_data_object: ImageData,
         expected: dict,
-        tmp_path,
 ):
-    expected["file_dir"] = tmp_path
     image_data_dict = dummy_image_data_object.to_dict()
 
     assert image_data_dict == expected
