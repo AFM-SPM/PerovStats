@@ -12,6 +12,7 @@ from .core.classes import ImageData
 from .core.utils import Skeletonisation
 from .pruning import prune_mask, find_splits
 
+# Cellpose ML parameters
 CELLPOSE_FLOW_THRESHOLD = 0.9
 CELLPOSE_PROB_THRESHOLD = -1
 CELLPOSE_MIN_SIZE = 5
@@ -92,8 +93,11 @@ def segment_image_cellpose(config: dict[str, any], image_object: ImageData) -> N
                         (image_object.high_pass.shape[1], image_object.high_pass.shape[0]),
                         interpolation=cv2.INTER_NEAREST).astype(np.uint16)
 
+    # We want a skeletonised mask of the grain outlines rather than the grains themselves so
+    # we use cellpose's built in function to get this data
     outlines = cellposeutils.masks_to_outlines(masks)
 
+    # closing is used to make sure small gaps in the outline mask are closed before skeletonisation
     np_mask = ski.morphology.closing(outlines, footprint=ski.morphology.disk(MORPHOLOGY_DISK_RADIUS))
     np_mask = Skeletonisation(image_object.high_pass, np_mask, height_bias=height_bias).do_skeletonisation()
 

@@ -33,16 +33,14 @@ def split_frequencies(
     ValueError
         If neither `cutoff` nor `cutoff_freq_nm` argument supplied.
     """
+    # Bring required config options into variables
     freqsplit_config = config["fourier"]
     edge_width = freqsplit_config["edge_width"]
     min_cutoff = freqsplit_config["cutoff_bounds"][0]
     max_cutoff = freqsplit_config["cutoff_bounds"][1]
     min_rms = freqsplit_config["min_rms"]
-    output_dir = Path(config["output_dir"])
 
     filename = image_object.filename
-    file_output_dir = Path(output_dir / filename)
-    file_output_dir.mkdir(parents=True, exist_ok=True)
     if image_object.image_flattened is not None:
         image = image_object.image_flattened
     else:
@@ -64,12 +62,15 @@ def split_frequencies(
                 pixel_to_nm_scaling=pixel_to_nm_scaling
             )
 
+            # The next stages will require a cutoff value, so the rest of the processing for the current image has to
+            # be skipped if this fails
             if not cutoff:
                 logger.error(f"[{filename}] : Cutoff frequency could not be determined, try adjusting the cutoff_bounds parameter. Skipping image..")
                 image_object.success = False
                 return
         else:
             cutoff = split_freq
+
         cutoff_nm = 2 * pixel_to_nm_scaling / cutoff
         logger.info(f"[{image_object.filename}] : Frequency cutoff: {round(cutoff, 4)} ({round(cutoff_nm, 4)}nm)")
 
@@ -78,6 +79,7 @@ def split_frequencies(
         image_object.cutoff_freq_nm = cutoff_nm
 
         logger.info(f"[{filename}] : Splitting image frequencies")
+        # Perform the fourier transformation using the found cutoff
         high_pass, low_pass = perform_fourier(
             image,
             cutoff=cutoff,
@@ -86,8 +88,9 @@ def split_frequencies(
 
         image_object.high_pass = high_pass
         image_object.low_pass = low_pass
-        image_object.file_directory = file_output_dir
     else:
+        # If frequency splitting is disabled we just assign the whole original image to image_object.high_pass as this variable
+        # is used through the rest of the program. image_object.low_pass is filled with 0s
         logger.info(f"[{image_object.filename}] : Frequency splitting is disabled by config, the original image will be used.")
         if image_object.image_flattened is not None:
             image_object.high_pass = image_object.image_flattened

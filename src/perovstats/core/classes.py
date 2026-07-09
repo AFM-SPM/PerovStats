@@ -96,10 +96,8 @@ class ImageData:
         Dictionary containing all grains that touch the edge of the image as class objects, with an id int as the key.
     smear_grains : dict[int, Grain]
         Dictionary containing all grains that touch a smear area as class objects, with an id int as the key.
-    file_directory : str
-        The folder to save output data to
     filename : str
-        The name of the original file without the extension
+        The name of the original file without the extension.
     mask_rgb : np.ndarray
         Image of the mask with grains coloured in for easier viewing.
     grains_per_nm2 : float
@@ -144,7 +142,6 @@ class ImageData:
     grains: dict[int, Grain] | None = None
     edge_grains: dict[int, Grain] | None = None
     smear_grains: dict[int, Grain] | None = None
-    file_directory: str | None = None
     filename: str | None = None
     mask_rgb: np.ndarray | None = None
     grains_per_nm2: float | None = None
@@ -174,7 +171,6 @@ class ImageData:
             Dictionary of all values to be saved to csv.
         """
         return {
-            "file_dir": self.file_directory,
             "filename": self.filename,
             "num_grains": self.num_grains,
             "grains_per_nm2": self.grains_per_nm2,

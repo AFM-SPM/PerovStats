@@ -20,9 +20,10 @@ def find_smear_areas(
     They are characteristed by areas of horizontal lines, most visible in the high-passed
     version of an image and occur when the gradient of the overall material is too high at
     a given point.
-    This method takes a high-passed array and for each pixel compares its gradient difference on each axis
-    with the horizontal axis' gradient for the low-passed image's corresponding pixel, pixels
-    over given thresholds for both masks are marked as smear areas.
+    This method takes a high-passed array and for each pixel compares:
+        - its gradient difference on each axis
+        - the horizontal axis' gradient for the low-passed image's corresponding pixel
+    Pixels over given thresholds for both masks are marked as smear areas.
 
     Parameters
     ----------
@@ -37,7 +38,6 @@ def find_smear_areas(
         smooth_sigma= config["smooth_sigma"]
         min_size = config["min_smear_size"]
         min_smear_area_percent = config["min_smear_area_percent"]
-        print(min_smear_area_percent)
         lowpass_threshold = config["lowpass_threshold"]
 
         high_pass = image_object.high_pass
@@ -55,7 +55,6 @@ def find_smear_areas(
         # Value given to each pixel based on the difference between horizontal and vertical gradient between it
         # and neighbouring pixels
         stripe_score = grad_y / (grad_x + 1e-6) # 1e-6 prevents 0 division
-
         mask = stripe_score > threshold
 
         # Remove smears not meeting minimum area requirements
@@ -64,6 +63,7 @@ def find_smear_areas(
             if np.sum(labeled == i) < min_size:
                 mask[labeled == i] = 0
 
+        # Close small gaps and holes in the mask
         mask = binary_closing(mask, structure=HORIZONTAL_DILATION_KERNEL)
 
         # Compare the mask calculated above with a mask selecting all pixels with a horizontal gradient over
@@ -80,6 +80,11 @@ def find_smear_areas(
 
         _, n = label(final_mask)
 
+        # If the percentage of the image marked as a smear is under a threshold given in config
+        # discard all smears - this is to discount tiny false positives in images that don't actually
+        # have any smears.
+        # I'm running off the principle that if a smear exists in an image there are usually a significant
+        # amount of them. This is not a watertight method, but works well enough for now.
         percentage = round(np.mean(final_mask) * 100, 2)
 
         logger.info(f"[{filename}] : Smear areas found: {n} ({percentage}% of mask)")
@@ -104,7 +109,6 @@ def clean_smears(mask: np.ndarray, smear_mask: np.ndarray) -> np.ndarray:
     """
     Compare the found grain segments with the previously computed smear mask
     and remove grains that overlap with any part of the mask.
-    Also keep a log of
 
     Parameters
     ----------
@@ -134,12 +138,14 @@ def clean_smears(mask: np.ndarray, smear_mask: np.ndarray) -> np.ndarray:
         region_crop = mask_labelled[region.slice] == region.label
         smear_crop = smear_mask[region.slice].astype(bool)
 
-        # if any pixels overlap with smear mask, remove them
+        # if any pixels overlap with smear mask, remove the grain
         if np.any(region_crop & smear_crop):
             remove_regions.append(region)
         else:
             keep_labels.append(region.label)
 
+    # Make a mask of all grains still here, and extend it by 1px on all edges to also cover the
+    # grain's outlines.
     good_grains_mask = np.isin(mask_labelled, keep_labels)
     no_fly_zone = morphology.dilation(good_grains_mask, footprint=morphology.disk(1))
 
