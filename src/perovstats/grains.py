@@ -55,7 +55,7 @@ def find_grains(
     # Remove grains not meeting minimum size requirements
     labelled_mask = remove_small_grains(labelled_mask, MIN_GRAIN_SIZE)
 
-    # Remove grains in/ touching smears
+    # Remove grains in/ touching smear areas
     if config["remove_smears"]["run"]:
         labelled_mask, removed_mask = clean_smears(labelled_mask, image_object.smears)
         image_object.smear_grains = removed_mask
@@ -91,14 +91,10 @@ def find_grains(
     for key, value in mask_data.items():
         setattr(image_object, key, value)
 
+    # Create the class instances for each grain (and assign them to image_object.grains)
     _create_grain_objects(
         image_object=image_object,
-        areas=mask_details['areas'],
-        perimeters=mask_details['perimeters'],
-        images=mask_details['images'],
-        masks=mask_details['masks'],
-        outlines=mask_details['outlines'],
-        bboxes=mask_details['bboxes']
+        mask_details=mask_details
     )
 
     image_object.indent_mask = image_object.mask
@@ -115,11 +111,33 @@ def find_grains(
     save_dir = Path(config["output_dir"]) / filename / "images"
     image_object.mask_areas = mask_details['areas']
     image_object.circularity_data = mask_details['circularities']
+
+    # Generate the histograms showing grain area and circularity rating
     grain_area_histogram(mask_details['areas'], filename, save_dir)
     grain_circularity_histogram(mask_details['circularities'], filename, save_dir)
 
 
 def _extract_regionprop_data(regionprops_list, scaling: float) -> dict:
+    """
+    Create a dictionary of lists, with each holding each grain's data regarding
+    the category defined in the key.
+    Some fields are stored in regionprops_list while others can be calculated using the pre-existing
+    values.
+
+    Parameters
+    ----------
+    regionprops_list
+        List of dictionaries, one for each grain. The dictionaries contain basic information
+        about a grain's shape/ location.
+    scaling : float
+        The pixel_to_nm_scaling.
+
+    Returns
+    -------
+    dict[list]
+        A dictionary with each key being a data category, with their values being lists
+        with one element/ datapoint per grain.
+    """
     return {
         'areas': [rp.area * scaling**2 for rp in regionprops_list],
         'perimeters': [rp.perimeter_crofton * scaling for rp in regionprops_list],
@@ -131,7 +149,22 @@ def _extract_regionprop_data(regionprops_list, scaling: float) -> dict:
 
 
 def calculate_grain_statistics(grain_areas: np.ndarray) -> tuple[float, float, float]:
-    """Calculate mean, median, and mode for grain areas."""
+    """
+    Calculate mean, median, and mode for grain areas.
+
+    Parameters
+    ----------
+    grain_areas : np.ndarray
+        An array of areas for all grains detected.
+
+    Returns
+    -------
+    tuple[float, float, float]
+        A tuple consisting of three floats:
+            - mean area
+            - median_area
+            - mode_area.
+    """
     if len(grain_areas) == 0:
         return 0.0, 0.0, 0.0
 
@@ -149,7 +182,21 @@ def _extract_grain_images(
     high_pass_image: np.ndarray,
     regionprops_list: list
 ) -> list[np.ndarray]:
-    """Extract individual grain images from high-pass filtered image."""
+    """
+    Extract individual grain images from high-pass filtered image.
+
+    Parameters
+    ----------
+    high_pass_image : np.ndarray
+        The highpassed version of the original image.
+    regionprops_list : list[dict[str, any]]
+        A list of basic data about each grain.
+
+    Return
+    ------
+    list[np.ndarray]
+        List of 2d arrays, one for each grain.
+    """
     grain_images = []
     for regionprop in regionprops_list:
         bbox_slice = regionprop.slice
@@ -167,7 +214,25 @@ def _calculate_image_statistics(
     grain_areas: np.ndarray,
     pixel_to_nm_scaling: float
 ) -> dict[str, float]:
-    """Calculate overall image statistics."""
+    """
+    Calculate overall image statistics.
+
+    Parameters
+    ----------
+    mask_shape : tuple[int, int]
+        Two ints giving the width and length of the iamge in pixels.
+    num_grains : int
+        Number of grains detected in the image.
+    grain_areas : np.ndarray
+        An array of areas for all grains detected.
+    pixel_to_nm_scaling : float
+        The pixel to nm scaling of the image.
+
+    Returns
+    -------
+    dict[str, any]
+        A dictionary of stats collected about the image as a whole.
+    """
     height, width = mask_shape
     mask_size_x_nm = width * pixel_to_nm_scaling
     mask_size_y_nm = height * pixel_to_nm_scaling
@@ -190,20 +255,33 @@ def _calculate_image_statistics(
 
 def _create_grain_objects(
     image_object: ImageData,
-    areas: list[float],
-    perimeters: list[float],
-    images: list[np.ndarray],
-    masks: list[np.ndarray],
-    outlines: list[np.ndarray],
-    bboxes: list[tuple]
-) -> list[float]:
-    """Create Grain objects and return circularity data."""
+    mask_details: dict[list[str, any]]
+) -> None:
+    """
+    Create Grain objects and return circularity data.
+
+    Parameters
+    ----------
+    image_object : ImageData
+        The ImageData class instance for the current image.
+    mask_details : dict[list[str, any]]
+        A dictionary containing data categories, each holding a list with
+        one value per grain.
+    """
     circularity_data = []
     image_object.grains = {}
+
+    areas = mask_details["areas"]
+    perimeters = mask_details["perimeters"]
+    images = mask_details["images"]
+    masks = mask_details["masks"]
+    outlines = mask_details["outlines"]
+    bboxes = mask_details["bboxes"]
 
     for i, (area, perimeter, image, mask, outline, bbox) in enumerate(
         zip(areas, perimeters, images, masks, outlines, bboxes)
     ):
+        # Calculate and collect additional data using the existing data categories
         circularity = _find_circularity_rating(area, perimeter)
         circularity_data.append(circularity)
 
@@ -212,6 +290,8 @@ def _create_grain_objects(
         centre_x = round(bbox[0] + (0.5 * width))
         centre_y = round(bbox[1] + (0.5 * height))
 
+        # Create a new Grain dataclass instance and add it to an empty
+        # index in image_object.grains
         image_object.grains[i] = Grain(
             grain_id=i,
             grain_image=image,
@@ -223,9 +303,6 @@ def _create_grain_objects(
             grain_size_px=(width, height),
             grain_centre_coords=(centre_x, centre_y),
         )
-
-    # WARNING: return potentially not needed/ used?
-    return circularity_data
 
 
 def _find_circularity_rating(grain_area: float, grain_perimeter: float) -> float:
@@ -273,29 +350,43 @@ def tidy_border(mask: np.ndarray[np.bool_], min_dist: float) -> np.ndarray[np.bo
     """
     # Find the grains that touch the border/ nearly touch the border then remove them from the full mask tensor
     # It is required to include grains almost touching the border here as the cellpose model can sometimes make straight grains
+    # 1 or 2 pixel away from and parallel to an edge of the image so we want to make sure these are removed.
     removed_mask = np.zeros_like(mask, dtype=bool)
     mask_labelled = morphology.label(mask)
     mask_regionprops = regionprops(mask_labelled)
     to_remove = []
     keep_indices = []
     for region in mask_regionprops:
+        # If grain region is too close too/ touching an edge
         if (
             region.bbox[0] < min_dist
             or region.bbox[1] < min_dist
             or region.bbox[2] > mask.shape[0] - min_dist
             or region.bbox[3] > mask.shape[1] - min_dist
         ):
+        # Assign to one of two lists depending on the if statement
             to_remove.append(region)
         else:
             keep_indices.append(region.label)
 
+    # Create a mask of just non-removed grains
     kept_mask = np.isin(mask_labelled, keep_indices)
+    # No fly zone is the kept_mask with a 1px border around all sections
+    # This is so the skeletonised mask around these grains is included in this zone
+    # so it's not deleted during cleaning.
     no_fly_zone = morphology.dilation(kept_mask, footprint=morphology.disk(1))
 
+    # All grain masks/ outlines of grains to be removed are deleted
+    # However mask outlines touching a kept and a removed grain are still kept
+    # to avoid kept grains missing outline
     for region in to_remove:
             grain_pixels = (mask_labelled == region.label)
             dilated_grain = morphology.dilation(grain_pixels, footprint=morphology.disk(1))
+            # Exclusive-or, meaning all pixels that're True in both arrays are discounted
+            # as well as all pixels that're False in both arrays.
+            # This leaves us with just the dilated pixels.
             outer_halo = dilated_grain ^ grain_pixels
+            # safe_halo is anywhere this dilated outline is and the no fly zone is False.
             safe_halo = outer_halo & ~no_fly_zone
             removed_mask[safe_halo] = True
             mask[grain_pixels] = 0
@@ -337,9 +428,17 @@ def remove_outliers(
     ----------
     criteria : str
         Either "area" for grain size or "shape" for circularity.
+
+    Returns
+    -------
+    np.ndarray
+        The updated labelled_mask after outliers have been removed.
+    int
+        The number of grains marked as outliers and removed.
     """
     mask_regionprops = regionprops(labelled_mask)
 
+    # Collect the required data
     if criteria == "area":
         values = np.array([rp.area * pixel_to_nm_scaling**2 for rp in mask_regionprops])
     elif criteria == "shape":

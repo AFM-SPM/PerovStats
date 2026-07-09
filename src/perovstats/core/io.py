@@ -71,6 +71,10 @@ class Images:
 
 
     def save_figure(self):
+        """
+        Save a png figure, getting data and configuration options from an Images class
+        instance and its arguments.
+        """
         fig, ax = plt.subplots(1, 1)
 
         # Add appropriate scalebar to image
@@ -241,6 +245,11 @@ def number_grain_plots(
 
 
 def save_images(config: dict[str, any], image_object: ImageData, variation: str=None) -> None:
+    """
+    Save all figures/ images defined in `image_set` in config, creating a new Images class
+    instance for each and passing the relevant arguments.
+    """
+    # Load config options into variables
     output_config = config["output"]
     cmap = output_config["colour_scheme"]
     number_grains = output_config["number_grains"]
@@ -249,6 +258,8 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
     font_size = output_config["font_size"]
     output_dir = Path(config["output_dir"])
 
+    # Prepare the output directory. The demo notebook will create two variations of these
+    # images so sub-folders may have to be made if `variation` is set to true
     filename = image_object.filename
     file_output_dir = Path(output_dir / filename)
     file_output_dir.mkdir(parents=True, exist_ok=True)
@@ -276,8 +287,7 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
         mask_regionprops = []
 
     # Create each image defined in image_set, adding mask overlays and grain numbers where appropriate.
-    # This includes calculating a suitable interpolation value to avoid blurring of any part without making the
-    # image unnecessarily large.
+    # Highpass image with mask skeleton overlay
     if "highpass_mask" in image_set:
         Images(
             data=image_object.high_pass,
@@ -294,6 +304,7 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             font_size=font_size,
         ).save_figure()
 
+    # Highpass image
     if "highpass" in image_set:
         Images(
             data=image_object.high_pass,
@@ -307,6 +318,7 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             font_size=font_size,
         ).save_figure()
 
+    # Lowpass image
     if "lowpass" in image_set:
         Images(
             data=image_object.low_pass,
@@ -320,6 +332,7 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             font_size=font_size,
         ).save_figure()
 
+    # Original image with the mask skeleton overlayed
     if "original_mask" in image_set:
         Images(
             data=image_object.image_original,
@@ -336,6 +349,7 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             font_size=font_size,
         ).save_figure()
 
+    # Original image
     if "original" in image_set:
         Images(
             data=image_object.image_original,
@@ -349,6 +363,9 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             font_size=font_size,
         ).save_figure()
 
+    # Grain areas mapped out with each grain having a random fill colour
+    # This is intended to make it easier to visually differentiate grains
+    # Black sections are areas with no grains (including areas that used to hold a removed grain)
     if "rgb_grains" in image_set:
         Images(
             data=image_object.mask_rgb,
@@ -361,6 +378,7 @@ def save_images(config: dict[str, any], image_object: ImageData, variation: str=
             font_size=font_size,
         ).save_figure()
 
+    # Highpass image with both the skeletonised grain mask and detected smear areas overlayed
     if "smears" in image_set:
         Images(
             data=image_object.high_pass,
@@ -406,17 +424,9 @@ def save_image(
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     if pixel_to_nm_scaling:
-        nm_min = vmin / pixel_to_nm_scaling
-        nm_max = vmax / pixel_to_nm_scaling
-
         fig, ax = plt.subplots()
         image_norm = normalise_array(image)
-        im = ax.imshow(image_norm, cmap=cmap, vmin=0, vmax=1)
-
-        cbar = fig.colorbar(im, ax=ax)
-        cbar.set_label("Height (nm)")
-        cbar.set_ticks([0, 0.25, 0.5, 0.75, 1.0])
-        cbar.set_ticklabels([f"{v:.2f}" for v in np.linspace(nm_min, nm_max, 5)])
+        ax.imshow(image_norm, cmap=cmap, vmin=0, vmax=1)
 
         ax.axis("off")
         fig.savefig(output_dir / filename, bbox_inches="tight", dpi=300)

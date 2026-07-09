@@ -13,6 +13,7 @@ from .grains import find_grains
 from .fourier import split_frequencies
 from .smears import find_smear_areas
 
+# Placeholder string of '='s for formatting longer log messages/ sections
 LOG_SEPARATOR = "=" * 99 + "\n"
 
 def run_process(
@@ -106,6 +107,8 @@ def run_process(
 
     time_end = time.perf_counter()
     time_taken = format_time(time_end - time_start)
+    # time_per_image is an estimate found by dividing the time taken by the number of images processed.
+    # Variation between individual images are not checked.
     time_per_image = format_time((time_end - time_start) / len(perovstats_object.images))
     completion_message(perovstats_object, time_taken, time_per_image)
 
