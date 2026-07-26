@@ -113,8 +113,9 @@ def find_grains(
     image_object.circularity_data = mask_details['circularities']
 
     # Generate the histograms showing grain area and circularity rating
-    grain_area_histogram(mask_details['areas'], filename, save_dir)
-    grain_circularity_histogram(mask_details['circularities'], filename, save_dir)
+    font_size = config["output"]["font_size"]
+    grain_area_histogram(mask_details['areas'], filename, save_dir, font_size)
+    grain_circularity_histogram(mask_details['circularities'], filename, save_dir, font_size)
 
 
 def _extract_regionprop_data(regionprops_list, scaling: float) -> dict:
