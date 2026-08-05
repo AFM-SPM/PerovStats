@@ -239,7 +239,7 @@ def number_grain_plots(
         # Number (white)
         numbering = ax.text(x_loc, y_loc, i, fontsize=font_size, color="white", ha="center", va="center")
         # Border (black)
-        numbering.set_path_effects([path_effects.Stroke(linewidth=1, foreground="black"), path_effects.Normal()])
+        numbering.set_path_effects([path_effects.Stroke(linewidth=0.5, foreground="black"), path_effects.Normal()])
 
     return fig, ax
 
@@ -464,7 +464,7 @@ def save_config(config: dict, output_filename: str) -> None:
         safe_dump(config, outfile, default_flow_style=False)
 
 
-def grain_area_histogram(data: list[float], filename: str, output_dir: Path):
+def grain_area_histogram(data: list[float], filename: str, output_dir: Path, font_size: float):
     """
     Method for saving a histogram plotting the areas of grains found.
 
@@ -480,9 +480,11 @@ def grain_area_histogram(data: list[float], filename: str, output_dir: Path):
     with plt.ioff():
         fig, ax = plt.subplots(figsize=(8, 6))
         sns.histplot(data, bins='auto', kde=True, log_scale=True, color='skyblue', edgecolor='black', ax=ax)
-        ax.set_xlabel('Values')
-        ax.set_ylabel('Frequency')
-        ax.set_title('Grain areas nm²')
+        ax.set_xlabel('Values', fontsize=font_size)
+        ax.set_ylabel('Frequency', fontsize=font_size)
+        ax.set_title('Grain areas nm²', fontsize=font_size)
+        plt.xticks(fontsize=font_size)
+        plt.yticks(fontsize=font_size)
         plt.tight_layout()
         full_output_dir = output_dir / "graphs"
         full_output_dir.mkdir(parents=True, exist_ok=True)
@@ -490,7 +492,7 @@ def grain_area_histogram(data: list[float], filename: str, output_dir: Path):
         plt.close(fig)
 
 
-def grain_circularity_histogram(data: list[float], filename: str, output_dir):
+def grain_circularity_histogram(data: list[float], filename: str, output_dir, font_size: float):
     """
     Method for saving a histogram plotting the circularity rating of grains found.
 
@@ -505,9 +507,11 @@ def grain_circularity_histogram(data: list[float], filename: str, output_dir):
     """
     fig, ax = plt.subplots(figsize=(8, 6))
     sns.histplot(data, bins='auto', kde=True, color='skyblue', edgecolor='black', ax=ax)
-    ax.set_xlabel('Values')
-    ax.set_ylabel('Frequency')
-    ax.set_title('Grain circularities (0-1)')
+    ax.set_xlabel('Values', fontsize=font_size)
+    ax.set_ylabel('Frequency', fontsize=font_size)
+    ax.set_title('Grain circularities (0-1)', fontsize=font_size)
+    plt.xticks(fontsize=font_size)
+    plt.yticks(fontsize=font_size)
     plt.tight_layout()
     full_output_dir = output_dir / "graphs"
     full_output_dir.mkdir(parents=True, exist_ok=True)
