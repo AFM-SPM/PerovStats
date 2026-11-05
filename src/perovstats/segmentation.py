@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from loguru import logger
-import skimage as ski
-import numpy as np
-from cellpose import models, core
-from cellpose import utils as cellposeutils
 import cv2
+import numpy as np
+import skimage as ski
 import torch
+from cellpose import core, models
+from cellpose import utils as cellposeutils
+from loguru import logger
 
 from .core.classes import ImageData
 from .core.utils import Skeletonisation
-from .pruning import prune_mask, find_splits
+from .pruning import find_splits, prune_mask
 
 # Cellpose ML parameters
 CELLPOSE_FLOW_THRESHOLD = 0.9
@@ -230,10 +230,8 @@ def create_grain_mask(
     im = np.clip(im, perc_low, perc_high)
 
     im_ = ski.filters.difference_of_gaussians(im, low_sigma=1, high_sigma=3)
-    # im_ = ski.filters.gaussian(im, sigma=smooth_sigma)
     # Get an array of thresholds for each pixel
     threshold = ski.filters.threshold_local(im_, block_size=threshold_block_size, offset=threshold_offset)
-    # threshold = ski.filters.threshold_otsu(im_)
     mask = im_ > threshold
     mask = clean_mask(mask, area_threshold=area_threshold, disk_radius=disk_radius) if area_threshold else mask
     selection = ski.util.invert(mask)
