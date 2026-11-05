@@ -10,10 +10,10 @@
 
     ![(venv) showing in terminal](./images/venv_check.jpg)
 
-    - If not, navigate to the folder your virtual environment is in and type:
+  - If not, navigate to the folder your virtual environment is in and type:
 
-        - **Windows:** `venv\Scripts\activate`
-        - **macOS/Linux:** `source venv/bin/activate`
+    - **Windows:** `venv\Scripts\activate`
+    - **macOS/Linux:** `source venv/bin/activate`
 
 - Navigate to the `/PerovStats/` folder in the same terminal
 
