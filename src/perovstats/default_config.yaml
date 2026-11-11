@@ -8,9 +8,10 @@ outliers:
   max_z_score: 5
 fourier:
   run: true
-  edge_width: 0.03 # Width of the cutoff in frequency when performing the fourier split, as a fraction of the total frequency range. Higher values make the split less sensitive to cutoff choice.
-  cutoff_bounds: [-1, 1] # Minimum and maximum cutoff points for frequency splitting.
-  min_rms: 10 # Minimum roughness mean score of a high-pass after splitting along the cutoff.
+  edge_width: 0 # Width of the cutoff in frequency when performing the fourier split, as a fraction of the total frequency range. Higher values make the split less sensitive to cutoff choice.
+  cutoff_nm: null # Skip cutoff finding and use this value. If `null` cutoff finding is run.
+  cutoff_bounds: [null, null] # Minimum and maximum cutoff points for frequency splitting.
+  min_rms: 11 # Minimum roughness mean score of a high-pass after splitting along the cutoff.
 segmentation:
   segmentation_method: traditional # Options: traditional, cellpose
   traditional:

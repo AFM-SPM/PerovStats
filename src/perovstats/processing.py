@@ -1,16 +1,16 @@
-from pathlib import Path
-from art import tprint
 import time
+from pathlib import Path
 
+import pandas as pd
+from art import tprint
 from loguru import logger
 from topostats.io import LoadScans
-import pandas as pd
 
 from .core.classes import ImageData, PerovStats
-from .core.io import save_to_csv, save_config, save_images
-from .segmentation import segment_image
+from .core.io import save_config, save_images, save_to_csv
+from .fourier import find_cutoff, split_frequencies
 from .grains import find_grains
-from .fourier import split_frequencies
+from .segmentation import segment_image
 from .smears import find_smear_areas
 
 # Placeholder string of '='s for formatting longer log messages/ sections
@@ -60,6 +60,27 @@ def run_process(
     logger.info("----------------------------------------------------------")
     logger.info(f"Loaded {len(perovstats_object.images)} images")
 
+    # Find cutoff if not defined in config
+    freqsplit_config = config["fourier"]
+    edge_width = freqsplit_config["edge_width"]  # nm^-1
+    min_cutoff_nm = freqsplit_config["cutoff_bounds"][0]
+    max_cutoff_nm = freqsplit_config["cutoff_bounds"][1]
+    min_rms = freqsplit_config["min_rms"]
+    cutoff_nm = freqsplit_config["cutoff_nm"]
+    config_cutoff = perovstats_object.config["fourier"]["cutoff_nm"]
+    image_object = perovstats_object.images[0]
+
+    cutoff_nm = config_cutoff if config_cutoff else find_cutoff(
+        image_object,
+        edge_width=edge_width,
+        min_cutoff_nm=min_cutoff_nm,
+        max_cutoff_nm=max_cutoff_nm,
+        min_rms=min_rms,
+        pixel_to_nm_scaling=topostats_object.pixel_to_nm_scaling,
+    )
+    perovstats_object.cutoff_nm = cutoff_nm
+
+    # Iterate through all images
     for idx, image_object in enumerate(perovstats_object.images):
         logger.info("----------------------------------------------------------")
         logger.info(f"Processing {image_object.filename} ({idx+1}/{len(perovstats_object.images)})")
@@ -68,7 +89,7 @@ def run_process(
         logger.debug(f"[{image_object.filename}] : pixel_to_nm_scaling: {image_object.pixel_to_nm_scaling}")
 
         # Apply fourier transform to split the image into a low-passed and high-passed image
-        split_frequencies(perovstats_object.config, image_object)
+        split_frequencies(perovstats_object.config, image_object, perovstats_object.cutoff_nm)
 
         # If frequency splitting was run and failed skip processing on the rest of the image
         if not image_object.success:

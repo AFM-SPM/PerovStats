@@ -1,7 +1,8 @@
 import numpy as np
-from scipy.ndimage import binary_closing, label, binary_dilation
 from loguru import logger
+from PIL import Image
 from scipy import ndimage as ndi
+from scipy.ndimage import binary_closing, binary_dilation, label
 from skimage import morphology
 from skimage.measure import regionprops
 
@@ -70,7 +71,22 @@ def find_smear_areas(
         # a given threshold in the low-pass image, creating a new mask containing all overlapping pixels
         low_pass_gradient_mask = get_horizontal_gradients(low_pass, threshold=lowpass_threshold)
         final_mask = mask & low_pass_gradient_mask
-        final_mask = binary_dilation(final_mask, structure=STANDARD_DILATION_KERNEL)
+
+        # # TEMP: save images of both masks for Alex's write up
+        # # - should we also create 'annotated'/ 'labelled' graphics explaining what each mask is in more detail??
+        # # - - probably - can just not be used if needed
+        # mask_1_image = Image.fromarray(mask)
+        # mask_1_image.save(f'{filename}_gradient_comaprison.png')
+        # mask_1_image.show()
+        # mask_2_image = Image.fromarray(low_pass_gradient_mask)
+        # mask_2_image.save(f'{filename}_thresholded_gradient.png')
+        # mask_2_image.show()
+
+        # final_mask = binary_dilation(final_mask, structure=STANDARD_DILATION_KERNEL)
+
+        # combined_mask_image = Image.fromarray(final_mask)
+        # combined_mask_image.save(f'{filename}_scombined_masks.png')
+        # combined_mask_image.show()
 
         # Again remove smears not meeting minimum area requirements
         labeled, n = label(final_mask)
