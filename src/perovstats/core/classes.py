@@ -198,6 +198,11 @@ class PerovStats:
         A list of all images inputted, containing the class object for each.
     config : dict[str, any] | None
         A dictionary containing all the confg options used, with the key being the name.
+    cutoff_nm : float | None
+        The cutoff frequency in nm found for the set of images. Set by config or
+        finding the cutoff freq of one image and applied to all, therefore is defined
+        in this parent dataclass.
     """
     images: list[ImageData] | None = None
     config: dict[str, any] | None = None
+    cutoff_nm: float | None = None

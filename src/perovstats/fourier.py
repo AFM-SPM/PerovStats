@@ -1,11 +1,11 @@
 from __future__ import annotations
-import cv2
 
-from loguru import logger
+import cv2
 import numpy as np
 import pyfftw
-from scipy.special import erf
+from loguru import logger
 from scipy.optimize import bisect
+from scipy.special import erf
 
 from .core.classes import ImageData
 from .core.image_processing import extend_image
@@ -14,10 +14,16 @@ from .core.image_processing import extend_image
 def split_frequencies(
     config: dict[str, any],
     image_object: ImageData,
-    split_freq: float = None,
+    split_freq_nm: float,
 ) -> None:
     """
     Carry out frequency splitting on an image.
+
+    All frequency parameters are expressed in real-world units, so the same
+    config gives the same physical split regardless of the image's pixel size:
+
+    - ``cutoff_bounds`` : [min, max] cutoff wavelength in nm.
+    - ``edge_width``    : width of the filter transition in cycles per nm (nm^-1).
 
     Parameters
     ----------
@@ -26,18 +32,16 @@ def split_frequencies(
     image_object: ImageData
         Class object of ImageData, containing all data connected
         to the current image.
-
-    Raises
-    ------
-    ValueError
-        If neither `cutoff` nor `cutoff_freq_nm` argument supplied.
+    split_freq_nm : float
+        Cutoff wavelength in nm.
     """
     # Bring required config options into variables
     freqsplit_config = config["fourier"]
-    edge_width = freqsplit_config["edge_width"]
-    min_cutoff = freqsplit_config["cutoff_bounds"][0]
-    max_cutoff = freqsplit_config["cutoff_bounds"][1]
+    edge_width = freqsplit_config["edge_width"]  # nm^-1
+    min_cutoff_nm = freqsplit_config["cutoff_bounds"][0]
+    max_cutoff_nm = freqsplit_config["cutoff_bounds"][1]
     min_rms = freqsplit_config["min_rms"]
+    cutoff_nm = freqsplit_config["cutoff_nm"]
 
     filename = image_object.filename
     if image_object.image_flattened is not None:
@@ -46,32 +50,46 @@ def split_frequencies(
         image = image_object.image_original
 
     if freqsplit_config["run"]:
+        # Size of one pixel in nm
         pixel_to_nm_scaling = image_object.pixel_to_nm_scaling
+
+        # Shortest wavelength the image can represent along an axis
+        nyquist_nm = 2 * pixel_to_nm_scaling
 
         logger.info(f"[{filename}] : *** Frequency splitting ***")
 
-        # Skip cutoff detection if a frequency has already been selected (via notebook sliders)
-        if split_freq is None:
-            cutoff = find_cutoff(
-                image_object,
-                edge_width=edge_width,
-                min_cutoff=min_cutoff,
-                max_cutoff=max_cutoff,
-                min_rms=min_rms,
-                pixel_to_nm_scaling=pixel_to_nm_scaling
+        # Skip cutoff detection if a wavelength has already been selected (via notebook sliders or previous image)
+        if split_freq_nm is None:
+            # Keep cutoff as is if it was defined in config
+            if cutoff_nm is None:
+                cutoff_nm = find_cutoff(
+                    image_object,
+                    edge_width=edge_width,
+                    min_cutoff_nm=min_cutoff_nm,
+                    max_cutoff_nm=max_cutoff_nm,
+                    min_rms=min_rms,
+                    pixel_to_nm_scaling=pixel_to_nm_scaling,
+                )
+
+                # The next stages will require a cutoff value, so the rest of the processing for the current image has to
+                # be skipped if this fails
+                if not cutoff_nm:
+                    logger.error(f"[{filename}] : Cutoff wavelength could not be determined, try adjusting the cutoff_bounds parameter. Skipping image..")
+                    image_object.success = False
+                    return
+        else:
+            cutoff_nm = split_freq_nm
+
+        if cutoff_nm < nyquist_nm:
+            logger.warning(
+                f"[{filename}] : Cutoff wavelength ({round(cutoff_nm, 4)}nm) is below the smallest wavelength this "
+                f"image can resolve ({round(nyquist_nm, 4)}nm), so the high-pass image will be almost empty. "
+                "Check that cutoff_bounds is given in nm."
             )
 
-            # The next stages will require a cutoff value, so the rest of the processing for the current image has to
-            # be skipped if this fails
-            if not cutoff:
-                logger.error(f"[{filename}] : Cutoff frequency could not be determined, try adjusting the cutoff_bounds parameter. Skipping image..")
-                image_object.success = False
-                return
-        else:
-            cutoff = split_freq
-
-        cutoff_nm = 2 * pixel_to_nm_scaling / cutoff
-        logger.info(f"[{image_object.filename}] : Frequency cutoff: {round(cutoff, 4)} ({round(cutoff_nm, 4)}nm)")
+        # Equivalent cutoff as a fraction of the Nyquist frequency. Not used by the filter, kept for reference
+        cutoff = nyquist_nm / cutoff_nm
+        logger.info(f"[{filename}] : Frequency cutoff: {round(cutoff_nm, 4)}nm ({round(cutoff, 4)} of Nyquist)")
 
         # Update image class with chosen cutoff
         image_object.cutoff = cutoff
@@ -81,8 +99,9 @@ def split_frequencies(
         # Perform the fourier transformation using the found cutoff
         high_pass, low_pass = perform_fourier(
             image,
-            cutoff=cutoff,
+            cutoff_nm=cutoff_nm,
             edge_width=edge_width,
+            pixel_to_nm_scaling=pixel_to_nm_scaling,
         )
 
         image_object.high_pass = high_pass
@@ -101,8 +120,9 @@ def split_frequencies(
 
 def perform_fourier(
     image: np.ndarray,
-    cutoff: float,
+    cutoff_nm: float,
     edge_width: float,
+    pixel_to_nm_scaling: float,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Perform frequency split on the specified image.
@@ -141,10 +161,10 @@ def perform_fourier(
     fft_input[:] = extended_image
     dft = fft_object()
 
-    freq_grid = create_frequency_mask(extended_image)
+    freq_grid = create_frequency_mask(extended_image, pixel_to_nm_scaling)
 
     # Create mask to filter to specified frequencies
-    mask = apply_cutoff(freq_grid, cutoff, edge_width=edge_width)
+    mask = apply_cutoff(freq_grid, cutoff_nm, edge_width=edge_width)
 
     # Mask the DFT output
     dft = dft * mask
@@ -165,13 +185,13 @@ def perform_fourier(
 def find_cutoff(
         image_object: ImageData,
         edge_width: float,
-        min_cutoff: float,
-        max_cutoff: float,
+        min_cutoff_nm: float,
+        max_cutoff_nm: float,
         min_rms: float,
         pixel_to_nm_scaling: float,
 ) -> float:
     """
-    Find an ideal cutoff for performing a fourier transform on
+    Find an ideal cutoff wavelength for performing a fourier transform on
     the current image.
     A fourier transform is setup and executed, and a binary search algorithm
     is used to test various cutoffs within the given range to find a value
@@ -183,27 +203,32 @@ def find_cutoff(
         Class object of the current image containing all data
         connected to it.
     edge_width : float
-        Edge width, expressed as a relative fraction of the Nyquist
-        frequency.  If zero, the filter has sharp edges.  For non-zero
-        values the transition has the shape of the error function,
-        with the specified width.
-    min_cutoff : float
-        Starting cutoff when looping through to find the ideal value.
-    max_cutoff : float
-        Finishing cutoff when looping through to find the ideal value.
+        Width of the filter transition in cycles per nm (nm^-1). If zero,
+        the filter has sharp edges. For non-zero values the transition has
+        the shape of the error function, with the specified width.
+    min_cutoff_nm : float
+        Shortest cutoff wavelength to consider, in nm.
+    max_cutoff_nm : float
+        Longest cutoff wavelength to consider, in nm.
     min_rms : float
         RMS threshold for when checking cutoffs.
     pixel_to_nm_scaling : float
-        Ratio of pixels:nm used for scaling parameters to ensure
-        consistency.
+        Size of one pixel in nm.
 
     Returns
     -------
     float
-        The best cutoff found.
+        The best cutoff wavelength found, in nm.
     """
+    logger.info(f"[{image_object.filename}] : Finding cutoff frequency...")
     image = image_object.image_original
-    best_cutoff = None
+    best_cutoff_nm = None
+
+    # Set the min and max cutoffs (nm) based on real world scan size
+    if min_cutoff_nm is None:
+        min_cutoff_nm = 2 * pixel_to_nm_scaling # Smallest detail the image can hold
+    if max_cutoff_nm is None:
+        max_cutoff_nm = max(image.shape) * pixel_to_nm_scaling # Width of the scan in nm
 
     # Perform a fourier transform to find
     extended_image, _ = extend_image(image, method=cv2.BORDER_REFLECT)
@@ -222,22 +247,25 @@ def find_cutoff(
     min_rms = min_rms + (pixel_to_nm_scaling * 0.1)
 
     # Define vars used for the binary search
-    freq_grid = create_frequency_mask(extended_image)
+    freq_grid = create_frequency_mask(extended_image, pixel_to_nm_scaling)
     power_spectrum_flat = np.abs(full_dft).ravel()**2
     freq_grid_flat = freq_grid.ravel()
     n_pixels_sq = n_pixels**2
 
-    # The function to take a cutoff and determine an rms from to be called multiple times by `bisect()`
-    def objective(cutoff):
-        mask = apply_cutoff(freq_grid_flat, cutoff, edge_width=edge_width)
+    # The function to take a cutoff wavelength and determine an rms from to be called multiple times by `bisect()`.
+    # A longer cutoff wavelength lets more of the spectrum into the high pass, so the rms rises with cutoff_nm
+    def objective(cutoff_nm):
+        mask = apply_cutoff(freq_grid_flat, cutoff_nm, edge_width=edge_width)
         current_sum_sq = np.dot(power_spectrum_flat, mask)
         current_rms = np.sqrt(current_sum_sq / n_pixels_sq)
         return current_rms - min_rms
 
     try:
-        # Run `objective()` multiple times to find the value giving an rms closest to the defined min_rms
-        best_cutoff = bisect(objective, min_cutoff, max_cutoff, xtol=1e-3)
-        return best_cutoff
+        # Run `objective()` multiple times to find the value giving an rms closest to the defined min_rms.
+        # xtol is in nm
+        best_cutoff_nm = bisect(objective, min_cutoff_nm, max_cutoff_nm, xtol=1e-3)
+        logger.info(f"[{image_object.filename}] : Cutoff selected: {best_cutoff_nm:.4f}nm")
+        return best_cutoff_nm
     except ValueError:
         logger.warning(
             f"[{image_object.filename}] : No cutoff could be found for the image. Please consider adjusting the cutoff bounds in the config."
@@ -247,7 +275,7 @@ def find_cutoff(
 
 def apply_cutoff(
     f_grid,
-    cutoff: float,
+    cutoff_nm: float,
     edge_width: float = 0,
 ) -> np.ndarray:
     """
@@ -258,9 +286,9 @@ def apply_cutoff(
     f_grid : np.ndarray
         Frequency grid of the image, each pixel containing a value indicating
         the distance from the zero-frequency component in a radial frequency map.
-    cutoff : float
-        The spatial frequency cut off, expressed as a relative fraction
-        of the Nyquist frequency.
+    cutoff_nm : float
+        The cutoff wavelength in nm. Frequencies above 1 / cutoff_nm
+        are kept by the mask.
     edge_width : float
         Edge width, expressed as a relative fraction of the Nyquist
         frequency. If zero, the filter has sharp edges. For non-zero
@@ -272,13 +300,19 @@ def apply_cutoff(
     np.ndarray
         Frequency mask.
     """
+    if cutoff_nm <= 0:
+        raise ValueError(f"Cutoff wavelength must be positive, got {cutoff_nm}nm.")
+
+    # Convert the wavelength to a spatial frequency in cycles per nm
+    cutoff_freq = 1.0 / cutoff_nm
+
     if edge_width and edge_width > 0:
-        return 0.5 * (erf((f_grid - cutoff) / edge_width) + 1)
+        return 0.5 * (erf((f_grid - cutoff_freq) / edge_width) + 1)
     else:
-        return (f_grid >= cutoff).astype(np.float64)
+        return (f_grid >= cutoff_freq).astype(np.float64)
 
 
-def create_frequency_mask(image: np.ndarray) -> np.ndarray:
+def create_frequency_mask(image: np.ndarray, pixel_to_nm_scaling: float) -> np.ndarray:
     """
     Create a 2D grid of normalised spatial frequencies for an image.
     Calculate the distance of each pixel from the zero frequency component
@@ -297,10 +331,14 @@ def create_frequency_mask(image: np.ndarray) -> np.ndarray:
     """
     # Create frequency mask grid
     yres, xres = image.shape
-    xr = np.arange(xres)
-    yr = np.arange(yres)
-    fx = 2 * np.fmin(xr, xres - xr) / xres
-    fy = 2 * np.fmin(yr, yres - yr) / yres
+
+    # xr = np.arange(xres)
+    # yr = np.arange(yres)
+    # fx = 2 * np.fmin(xr, xres - xr) / xres
+    # fy = 2 * np.fmin(yr, yres - yr) / yres
+
+    fx = np.abs(np.fft.fftfreq(xres, d=pixel_to_nm_scaling))
+    fy = np.abs(np.fft.fftfreq(yres, d=pixel_to_nm_scaling))
 
     # Full coordinate arrays
     xx, yy = np.meshgrid(fx, fy)
