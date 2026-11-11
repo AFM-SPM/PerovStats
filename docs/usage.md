@@ -124,7 +124,7 @@
         ```
 
   - `--segmentation` or `-s`
-    - Choose the segmentation method for finding grains in an image. Options are 'traditional' or 'cellpose' (see the [segmentation documentation](segmentation.md) for details on each of these).
+    g- Choose the segmentation method for finding grains in an image. Options are 'traditional' or 'cellpose' (see the [segmentation documentation](segmentation.md) for details on each of these).
 
         ```powershell
         perovstats -s "traditional" process
